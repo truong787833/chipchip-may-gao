@@ -1,0 +1,18 @@
+{
+  "version": "1.0.2",
+  "build_number": 103,
+  "release_date": "2026-11-24",
+  "channel": "stable",
+  "app_name": "ChipChip Mây & Gạo",
+  "latest_version": "1.0.2",
+  "latest_build": 103,
+  "has_update": false,
+  "update_url": "",
+  "changelog": [
+    "Thử nghiệm cập nhật OTA Siêu Tốc 1 giây thành công 100%",
+    "Tinh gọn giao diện: Chỉ còn 1 nút [Cập Nhật OTA Siêu Tốc] duy nhất, xóa bỏ [Quét Gói Máy]",
+    "Tự động tìm kiếm gói OTA trong thư mục Download để nâng cấp tức thì",
+    "Bảo toàn 100% dữ liệu đơn hàng và khách nợ, không bao giờ mất thông tin",
+    "Huy hiệu nhận diện phiên bản mới v1.0.2 OTA trực quan trên thanh tiêu đề"
+  ]
+}

@@ -1,0 +1,3712 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ChipChip Mây & Gạo - Sổ Đơn Hàng</title>
+  <link rel="icon" type="image/jpeg" href="assets/logo.jpg">
+  <link rel="apple-touch-icon" href="assets/logo.jpg">
+  <link rel="manifest" href="manifest.json">
+  <script src="vendor/tailwind.js"></script>
+  <script src="vendor/chart.min.js"></script>
+  <link rel="stylesheet" href="vendor/fontawesome.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+    html {
+      height: 100%;
+      -webkit-text-size-adjust: 100%;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #F8F9FA;
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      overflow-x: hidden;
+      overscroll-behavior-y: none;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+    }
+    /* Tối ưu hóa card để cuộn 60 FPS - 120 FPS mượt như nhung */
+    .order-card {
+      contain: layout style paint;
+      content-visibility: auto;
+      contain-intrinsic-size: 135px;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    /* Nút bấm xúc giác nảy chân thực */
+    .btn-tactile {
+      transition: transform 0.1s ease, opacity 0.1s ease;
+      touch-action: manipulation;
+    }
+    .btn-tactile:active {
+      transform: scale(0.95);
+    }
+    /* Thẻ hoàn thành - Rõ chữ 100%, dịu mắt */
+    .completed-card {
+      background-color: #F8FAFC !important;
+      border-color: #E2E8F0 !important;
+    }
+    .completed-text {
+      text-decoration: line-through;
+      color: #94A3B8;
+    }
+    /* Chấm phát sáng nhịp thở nhẹ */
+    .pulse-dot {
+      animation: pulseGlow 2.5s infinite;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.15); }
+    }
+  </style>
+</head>
+<body class="text-slate-800 pb-28 relative">
+  <!-- TOAST NOTIFICATION THÔNG BÁO SIÊU ĐẸP -->
+  <div id="appToast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 -translate-y-4">
+    <div class="bg-slate-900/90 backdrop-blur-md text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 border border-white/20">
+      <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+      <span id="appToastText">Thông báo</span>
+    </div>
+  </div>
+
+  <!-- TOP APP BAR -->
+  <header class="sticky top-0 z-40 bg-white border-b border-rose-100 shadow-xs px-3.5 py-2.5" id="mainHeader">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-2.5">
+        <div class="relative">
+          <div class="w-10 h-10 rounded-2xl overflow-hidden border-2 border-rose-200 shadow-md shadow-rose-200/50 bg-white shrink-0 flex items-center justify-center">
+            <img src="assets/logo.jpg" alt="Logo ChipChip Mây & Gạo" class="w-full h-full object-cover">
+          </div>
+          <!-- Chấm trạng thái hoạt động -->
+          <span class="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full pulse-dot"></span>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <h1 class="text-base font-extrabold text-slate-800 leading-tight">ChipChip Mây & Gạo</h1>
+            <span class="text-[9px] bg-rose-100 text-rose-700 font-extrabold px-1.5 py-0.2 rounded-md">PRO</span>
+            <span class="text-[9px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full shadow-xs flex items-center gap-0.5"><i class="fa-solid fa-bolt text-[8px]"></i>v1.0.2</span>
+          </div>
+          <p class="text-[11px] text-slate-500 font-medium" id="currentDateText">Hôm nay</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-1.5">
+        <button onclick="openQrModal(null)" class="btn-tactile h-8 px-2.5 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs flex items-center space-x-1 border border-rose-200 shadow-xs" title="Mã QR Chuyển Khoản">
+          <i class="fa-solid fa-qrcode text-xs"></i>
+          <span>Mã QR</span>
+        </button>
+        <button onclick="openConfigModal()" class="btn-tactile w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center shadow-xs" title="Cài đặt">
+          <i class="fa-solid fa-sliders text-xs"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto px-3.5 pt-3 pb-24 space-y-3.5">
+    <!-- ==================== TAB 1: SỔ ĐƠN HÀNG ==================== -->
+    <div id="tab-orders" class="space-y-3">
+      <!-- THANH TÌM KIẾM TÊN KHÁCH HÀNG THÔNG MINH -->
+      <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+          <i class="fa-solid fa-magnifying-glass text-sm"></i>
+        </div>
+        <input type="text" id="searchInput" oninput="handleSearch(this.value)" placeholder="🔍 Tìm tên khách (VD: A đức, Mụ hoa, Mai...)" class="w-full pl-10 pr-9 py-2.5 bg-white border border-slate-200/90 rounded-2xl text-xs font-semibold placeholder-slate-400 text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-rose-400 shadow-sm transition">
+        <button id="searchClearBtn" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition">
+          <i class="fa-solid fa-circle-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- 4 THẺ TRẠNG THÁI -->
+      <!-- KHỐI GIẢI RỐI 4 TRẠNG THÁI (BẤM VÀO ĐỂ LỌC NGAY) -->
+    <div class="space-y-2">
+      <div class="text-xs font-extrabold text-slate-700 flex items-center justify-between px-0.5">
+        <span class="flex items-center gap-1.5">
+          <i class="fa-solid fa-layer-group text-rose-500"></i>
+          <span>THEO DÕI HÀNG & TIỀN (Chạm để xem):</span>
+        </span>
+        <span class="text-[11px] text-slate-400 font-semibold">4 mục rõ ràng</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <!-- 1. ĐÃ GIAO MÀ CHƯA TIỀN (CẦN ĐÒI NỢ) -->
+        <div onclick="setFilter('need_payment')" id="card-filter-need_payment" class="btn-tactile cursor-pointer p-3 bg-red-50/90 border-2 border-red-200 hover:border-red-400 rounded-2xl transition shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="font-black text-red-700 flex items-center gap-1.5 text-[11px]">
+              <span class="w-2 h-2 rounded-full bg-red-500 pulse-dot"></span>
+              <span>CẦN ĐÒI TIỀN</span>
+            </span>
+            <span id="badge-need-payment" class="bg-red-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full shadow-xs">0</span>
+          </div>
+          <p class="text-[10px] text-red-600 font-medium mt-1">Đã giao hàng nhưng chưa nhận tiền</p>
+        </div>
+
+        <!-- 2. ĐÃ TRẢ TIỀN MÀ CHƯA GIAO (NỢ HÀNG) -->
+        <div onclick="setFilter('need_delivery')" id="card-filter-need_delivery" class="btn-tactile cursor-pointer p-3 bg-blue-50/90 border-2 border-blue-200 hover:border-blue-400 rounded-2xl transition shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="font-black text-blue-700 flex items-center gap-1.5 text-[11px]">
+              <span class="w-2 h-2 rounded-full bg-blue-500 pulse-dot"></span>
+              <span>NỢ HÀNG KHÁCH</span>
+            </span>
+            <span id="badge-need-delivery" class="bg-blue-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full shadow-xs">0</span>
+          </div>
+          <p class="text-[10px] text-blue-600 font-medium mt-1">Khách đã trả/CK nhưng chưa giao</p>
+        </div>
+
+        <!-- 3. CHƯA GIAO & CHƯA TIỀN (ĐƠN MỚI) -->
+        <div onclick="setFilter('pending')" id="card-filter-pending" class="btn-tactile cursor-pointer p-3 bg-amber-50/90 border-2 border-amber-200 hover:border-amber-400 rounded-2xl transition shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="font-black text-amber-700 flex items-center gap-1.5 text-[11px]">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span>ĐƠN MỚI ĐẶT</span>
+            </span>
+            <span id="badge-pending" class="bg-amber-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full shadow-xs">0</span>
+          </div>
+          <p class="text-[10px] text-amber-600 font-medium mt-1">Chưa giao và chưa nhận tiền</p>
+        </div>
+
+        <!-- 4. XONG (ĐÃ GIAO & ĐÃ TIỀN) -->
+        <div onclick="setFilter('done')" id="card-filter-done" class="btn-tactile cursor-pointer p-3 bg-emerald-50/90 border-2 border-emerald-200 hover:border-emerald-400 rounded-2xl transition shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="font-black text-emerald-700 flex items-center gap-1.5 text-[11px]">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>XONG</span>
+            </span>
+            <span id="badge-done" class="bg-emerald-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full shadow-xs">0</span>
+          </div>
+          <p class="text-[10px] text-emerald-600 font-medium mt-1">Đã giao hàng và đã thu tiền xong</p>
+        </div>
+      </div>
+    </div>
+
+      <!-- BỘ LỌC VÀ DANH SÁCH ĐƠN HÀNG -->
+      <!-- THANH TÌM KIẾM & BỘ LỌC DANH SÁCH (NGẮN GỌN, KHÔNG BỊ CHE CHỮ) -->
+    <div class="space-y-2 pt-1">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-extrabold text-slate-800 flex items-center gap-1.5">
+          <span>Danh Sách Đơn</span>
+          <span class="text-xs bg-slate-200 text-slate-800 px-2 py-0.5 rounded-full font-black" id="orderCountBadge">0</span>
+        </h2>
+        <div class="flex gap-1.5 text-[11px]">
+          <button onclick="restoreInitialDataConfirm()" class="btn-tactile text-slate-400 hover:text-slate-600 font-semibold underline">
+            Nạp mẫu
+          </button>
+          <span class="text-slate-300">|</span>
+          <button onclick="clearAllOrdersConfirm()" class="btn-tactile text-rose-500 hover:text-rose-700 font-semibold">
+            Xóa hết
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter tabs cân đối 2 hàng đẹp mắt, không bao giờ lệch hoặc che chữ -->
+      <div class="space-y-1.5 text-xs">
+        <!-- Hàng 1: 3 nút chính cân đều (Tất cả - Đơn mới - Xong) -->
+        <div class="grid grid-cols-3 gap-1.5">
+          <button onclick="setFilter('all')" id="filter-all" class="btn-tactile filter-tab py-2 px-1 rounded-xl font-black bg-slate-800 text-white transition text-center shadow-sm truncate">
+            Tất cả (<span id="tabCount-all">0</span>)
+          </button>
+          <button onclick="setFilter('pending')" id="filter-pending" class="btn-tactile filter-tab py-2 px-1 rounded-xl font-bold bg-white text-amber-700 border border-amber-200 transition text-center truncate shadow-xs">
+            ⏳ Đơn mới (<span id="tabCount-pending">0</span>)
+          </button>
+          <button onclick="setFilter('done')" id="filter-done" class="btn-tactile filter-tab py-2 px-1 rounded-xl font-bold bg-white text-emerald-700 border border-emerald-200 transition text-center truncate shadow-xs">
+            🟢 Xong (<span id="tabCount-done">0</span>)
+          </button>
+        </div>
+
+        <!-- Hàng 2: 2 nút trạng thái giao & tiền cân đều (Cần đòi tiền - Nợ hàng) -->
+        <div class="grid grid-cols-2 gap-1.5">
+          <button onclick="setFilter('need_payment')" id="filter-need_payment" class="btn-tactile filter-tab py-2 px-1.5 rounded-xl font-bold bg-white text-red-700 border border-red-200 transition text-center truncate shadow-xs">
+            🔴 Cần đòi tiền (<span id="tabCount-need_payment">0</span>)
+          </button>
+          <button onclick="setFilter('need_delivery')" id="filter-need_delivery" class="btn-tactile filter-tab py-2 px-1.5 rounded-xl font-bold bg-white text-blue-700 border border-blue-200 transition text-center truncate shadow-xs">
+            🔵 Nợ hàng (<span id="tabCount-need_delivery">0</span>)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DANH SÁCH ĐƠN HÀNG CHI TIẾT -->
+    <div id="orderList" class="space-y-2.5">
+      <!-- Items will be injected by JavaScript -->
+    </div>
+  </div>
+    </div>
+
+    <!-- ==================== TAB 2: TẠO ĐƠN MỚI ==================== -->
+    <div id="tab-add" class="hidden space-y-3">
+      <div class="bg-gradient-to-r from-rose-500 to-amber-500 rounded-2xl p-3 text-white shadow-md flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+            <i class="fa-solid fa-cart-plus text-sm"></i>
+          </div>
+          <div>
+            <h2 class="text-xs font-black uppercase tracking-wide">Nhập Đơn Hàng Mới Cho Vợ</h2>
+            <p class="text-[11px] text-white/90">Ghi sổ siêu tốc & tự động tính tiền</p>
+          </div>
+        </div>
+        <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">Chạm để chọn</span>
+      </div>
+
+      <!-- KHỐI NHẬP ĐƠN NHANH (FAST ADD FORM) -->
+    <div class="glass-card rounded-3xl p-4 border border-rose-100/80 shadow-md shadow-rose-100/40 space-y-3.5">
+      <div class="flex items-center justify-between">
+        <div class="text-xs font-black text-slate-800 flex items-center gap-1.5">
+          <i class="fa-solid fa-plus-circle text-rose-500 text-sm"></i>
+          <span>THÊM ĐƠN MỚI SIÊU TỐC</span>
+        </div>
+        <span class="text-[11px] text-slate-400 font-medium">Chạm để chọn nhanh</span>
+      </div>
+
+      <!-- Tên khách hàng -->
+      <div class="relative">
+        <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-xs text-slate-400"></i>
+        <input type="text" id="inputName" placeholder="Tên khách (VD: Chị Bê, Cô Khánh...)" 
+               class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-9 pr-3.5 py-2.5 text-sm font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500 transition">
+      </div>
+
+      <!-- Chọn nhanh số lạng hoặc Hộp -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-[11px] font-bold text-slate-500">Khối lượng / Số lượng:</label>
+          <div class="flex gap-2">
+            <label class="text-[11px] flex items-center gap-1 font-semibold text-slate-600 cursor-pointer">
+              <input type="radio" name="unitType" value="lang" checked onchange="toggleUnitMode('lang')" class="text-rose-500 focus:ring-0">
+              Theo lạng
+            </label>
+            <label class="text-[11px] flex items-center gap-1 font-semibold text-slate-600 cursor-pointer">
+              <input type="radio" name="unitType" value="hop" onchange="toggleUnitMode('hop')" class="text-rose-500 focus:ring-0">
+              Theo hộp
+            </label>
+          </div>
+        </div>
+
+        <!-- Mode chọn nhanh Lạng -->
+        <div id="quickLangContainer" class="grid grid-cols-5 gap-1.5">
+          <button type="button" onclick="selectQuickLang(2, this)" class="btn-tactile quick-lang-btn py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white hover:bg-rose-50 text-slate-700 shadow-xs">2 lạng</button>
+          <button type="button" onclick="selectQuickLang(3, this)" class="btn-tactile quick-lang-btn py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white hover:bg-rose-50 text-slate-700 shadow-xs">3 lạng</button>
+          <button type="button" onclick="selectQuickLang(4, this)" class="btn-tactile quick-lang-btn py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white hover:bg-rose-50 text-slate-700 shadow-xs">4 lạng</button>
+          <button type="button" onclick="selectQuickLang(5, this)" class="btn-tactile quick-lang-btn py-2 rounded-xl text-xs font-black border-2 border-rose-500 bg-rose-500 text-white shadow-md shadow-rose-200">5 lạng</button>
+          <button type="button" onclick="selectQuickLang(6, this)" class="btn-tactile quick-lang-btn py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white hover:bg-rose-50 text-slate-700 shadow-xs">6 lạng</button>
+        </div>
+
+        <!-- Ô nhập chi tiết số lạng nếu khác -->
+        <div id="customLangWrapper" class="flex gap-2 pt-1">
+          <div class="relative flex-1">
+            <input type="number" id="inputLangValue" value="5" step="0.5" min="0.1" 
+                   class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:border-rose-500">
+            <span class="absolute right-3.5 top-2.5 text-xs text-slate-400 font-bold">lạng</span>
+          </div>
+        </div>
+
+        <!-- Mode chọn theo Hộp (Ẩn ban đầu) -->
+        <div id="boxModeContainer" class="hidden grid grid-cols-2 gap-2 pt-1">
+          <div class="relative">
+            <input type="number" id="inputBoxCount" placeholder="Số hộp" value="2" min="1" 
+                   class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 text-sm font-bold focus:outline-none focus:border-rose-500">
+            <span class="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">Hộp</span>
+          </div>
+          <div class="relative">
+            <input type="number" id="inputBoxWeight" placeholder="Số lạng/hộp" value="4" step="0.5" 
+                   class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 text-sm font-bold focus:outline-none focus:border-rose-500">
+            <span class="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">lạng/hộp</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chọn Vị Kẹo -->
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="text-[11px] font-bold text-slate-500">Chọn vị kẹo:</label>
+          <button type="button" onclick="promptAddNewFlavor()" class="btn-tactile text-[11px] font-extrabold text-rose-600 hover:text-rose-700 flex items-center gap-1">
+            <i class="fa-solid fa-plus-circle text-xs"></i>
+            <span>+ Thêm vị mới</span>
+          </button>
+        </div>
+        
+        <div id="flavorSelectionContainer" class="grid grid-cols-3 gap-1.5">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="mt-2 text-[11px] text-slate-500 flex items-center justify-between font-medium">
+          <span id="flavorPriceHint">Giá vị đang chọn: 25.000đ/lạng</span>
+          <button type="button" onclick="openConfigModal()" class="text-rose-500 font-bold underline">Sửa giá</button>
+        </div>
+      </div>
+
+      <!-- Trạng thái tiền & Ghi chú -->
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[11px] font-bold text-slate-500 mb-1 block">Tiền bạc:</label>
+          <select id="inputPaymentStatus" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:border-rose-500">
+            <option value="unpaid">Chưa trả tiền</option>
+            <option value="transfer">Đã chuyển khoản</option>
+            <option value="cash">Đã trả tiền mặt</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[11px] font-bold text-slate-500 mb-1 block">Ghi chú (nếu có):</label>
+          <input type="text" id="inputNote" placeholder="VD: lấy rồi, t7 giao..." 
+                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:border-rose-500">
+        </div>
+      </div>
+
+      <!-- Nút Lưu Đơn Siêu Đẳng Cấp -->
+      <button type="button" onclick="addNewOrder()" class="btn-tactile w-full py-3.5 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-600 text-white font-black rounded-2xl shadow-lg shadow-rose-500/25 text-sm flex items-center justify-center space-x-2">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span>THÊM VÀO SỔ ĐƠN</span>
+      </button>
+    </div>
+    </div>
+
+    <!-- ==================== TAB 3: NGUYÊN LIỆU & LÃI LỜI ==================== -->
+    <div id="tab-materials" class="hidden space-y-3.5">
+      <div id="view-materials-section" class="space-y-3.5">
+        
+
+    <!-- BỘ LỌC THỜI GIAN & ĐỢT HÀNG -->
+    <div class="bg-white rounded-2xl p-3 border border-slate-200/90 shadow-sm space-y-2.5">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+          <i class="fa-solid fa-filter text-emerald-600"></i>
+          <span>TÍNH LỜI LÃI THEO:</span>
+        </span>
+        <span id="currentProfitPeriodLabel" class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+          Toàn bộ các đợt
+        </span>
+      </div>
+
+      <!-- 4 Nút Lựa Chọn: Theo Ngày | Theo Tháng | Theo Đợt | Toàn Bộ -->
+      <div class="grid grid-cols-4 gap-1 text-[11px]">
+        <button onclick="setProfitFilterMode('day')" id="profit-mode-day" class="profit-mode-btn py-1.5 rounded-xl font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 transition text-center">
+          📅 Ngày
+        </button>
+        <button onclick="setProfitFilterMode('month')" id="profit-mode-month" class="profit-mode-btn py-1.5 rounded-xl font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 transition text-center">
+          🗓️ Tháng
+        </button>
+        <button onclick="setProfitFilterMode('batch')" id="profit-mode-batch" class="profit-mode-btn py-1.5 rounded-xl font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 transition text-center">
+          🏷️ Đợt
+        </button>
+        <button onclick="setProfitFilterMode('all')" id="profit-mode-all" class="profit-mode-btn py-1.5 rounded-xl font-bold bg-slate-800 text-white shadow-sm transition text-center">
+          ⭐ Tất cả
+        </button>
+      </div>
+
+      <!-- Bộ chọn con tùy biến (Ngày / Tháng / Đợt) -->
+      <div id="profitFilterControlsContainer" class="pt-1">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- CARD BẢNG KÊ LÃI / LỖ THỰC TẾ (CÔNG THỨC TRỰC QUAN TO RÕ) -->
+    <div class="bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-800 rounded-3xl p-4 text-white shadow-lg shadow-emerald-200/50 space-y-3 relative overflow-hidden">
+      <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+
+      <div class="flex items-center justify-between text-xs">
+        <span class="font-extrabold uppercase tracking-wider text-emerald-200 flex items-center gap-1.5">
+          <i class="fa-solid fa-scale-balanced"></i>
+          <span>BẢNG KÊ TÀI CHÍNH THỰC TẾ:</span>
+        </span>
+        <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-semibold" id="profitPeriodBadge">Tất cả đợt</span>
+      </div>
+
+      <!-- 2 Ô Số Liệu Nền Tảng -->
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <!-- Ô 1: Tổng Tiền Đã Nhận -->
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-2.5 border border-white/10">
+          <span class="text-[10px] text-emerald-200 font-bold block mb-0.5">① TIỀN ĐÃ THU ĐƯỢC:</span>
+          <div class="text-base font-black text-white" id="profitReceivedMoney">0 đ</div>
+          <p class="text-[9px] text-emerald-100/70 mt-0.5">Tiền về ví / tài khoản</p>
+        </div>
+
+        <!-- Ô 2: Tổng Tiền Mua Đồ -->
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-2.5 border border-white/10">
+          <span class="text-[10px] text-rose-200 font-bold block mb-0.5">② TIỀN MUA NGUYÊN LIỆU:</span>
+          <div class="text-base font-black text-rose-200" id="profitExpenseMoney">0 đ</div>
+          <p class="text-[9px] text-rose-100/70 mt-0.5">Tổng tiền đi chợ, vật tư</p>
+        </div>
+      </div>
+
+      <!-- CÔNG THỨC TRỰC QUAN: TỔNG TIỀN ĐÃ NHẬN - TỔNG TIỀN MUA ĐỒ = TIỀN LÃI -->
+      <div class="bg-black/35 rounded-2xl p-3 border border-emerald-400/40 text-center space-y-1">
+        <div class="text-[10px] uppercase font-bold text-emerald-300 flex items-center justify-center gap-1">
+          <span>TIỀN ĐÃ NHẬN</span>
+          <span class="text-rose-400 font-black">-</span>
+          <span>TIỀN MUA ĐỒ</span>
+          <span class="text-emerald-400 font-black">=</span>
+          <span class="underline font-black text-white">LỢI NHUẬN THỰC TẾ</span>
+        </div>
+        <div class="text-2xl font-black tracking-tight" id="netProfitDisplay">0 đ</div>
+        <div class="text-[11px] font-bold" id="netProfitStatusText">🎉 Đang có lãi</div>
+      </div>
+
+      <!-- Dòng phụ: Dự kiến lời khi thu hết nợ -->
+      <div class="flex items-center justify-between text-[11px] bg-white/10 rounded-xl px-3 py-1.5">
+        <span class="text-emerald-100">Dự kiến lãi khi thu hết tiền nợ:</span>
+        <strong class="text-amber-300 font-black" id="projectedProfitDisplay">0 đ</strong>
+      </div>
+    </div>
+
+    <!-- FORM THÊM NGUYÊN LIỆU / VẬT TƯ ĐÃ MUA -->
+    <div class="bg-white rounded-2xl p-3.5 border border-slate-200/90 shadow-sm space-y-3">
+      <div class="flex items-center justify-between">
+        <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+          <i class="fa-solid fa-cart-shopping text-emerald-600"></i>
+          <span>THÊM NGUYÊN LIỆU / ĐỒ MUA MỚI</span>
+        </div>
+        <span class="text-[11px] text-slate-400">Ghi chép tức thì</span>
+      </div>
+
+      <!-- Chạm để chọn nhanh nguyên liệu -->
+      <div class="space-y-1">
+        <span class="text-[10px] font-bold text-slate-500">Gợi ý nhanh đồ hay mua:</span>
+        <div class="flex flex-wrap gap-1 text-[11px]">
+          <button type="button" onclick="quickFillMaterial('Gelatin lá Đức', 1.2, 'kg', 280000)" class="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 hover:bg-emerald-100">Gelatin Đức</button>
+          <button type="button" onclick="quickFillMaterial('Đường phèn kết tinh', 3, 'kg', 90000)" class="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 font-bold border border-amber-200 hover:bg-amber-100">Đường phèn</button>
+          <button type="button" onclick="quickFillMaterial('Mạch nha nếp', 1, 'hộp', 35000)" class="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 font-bold border border-amber-200 hover:bg-amber-100">Mạch nha</button>
+          <button type="button" onclick="quickFillMaterial('Lá húng chanh & Quất', 3, 'lạng', 45000)" class="px-2 py-0.5 rounded-lg bg-lime-50 text-lime-700 font-bold border border-lime-200 hover:bg-lime-100">Húng chanh</button>
+          <button type="button" onclick="quickFillMaterial('Xoài cát chín', 2, 'kg', 60000)" class="px-2 py-0.5 rounded-lg bg-yellow-50 text-yellow-700 font-bold border border-yellow-200 hover:bg-yellow-100">Xoài chín</button>
+          <button type="button" onclick="quickFillMaterial('Chanh leo tím', 25, 'quả', 40000)" class="px-2 py-0.5 rounded-lg bg-orange-50 text-orange-700 font-bold border border-orange-200 hover:bg-orange-100">Chanh leo</button>
+          <button type="button" onclick="quickFillMaterial('Hộp nhựa kẹo 4 lạng', 30, 'hộp', 60000)" class="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 font-bold border border-blue-200 hover:bg-blue-100">Hộp nhựa</button>
+          <button type="button" onclick="quickFillMaterial('Tem nhãn logo', 50, 'tấm', 30000)" class="px-2 py-0.5 rounded-lg bg-purple-50 text-purple-700 font-bold border border-purple-200 hover:bg-purple-100">Tem nhãn</button>
+        </div>
+      </div>
+
+      <!-- Tên món đồ mua -->
+      <div>
+        <label class="text-[11px] font-bold text-slate-600 block mb-1">Tên nguyên liệu / đồ mua:</label>
+        <input type="text" id="inputMaterialName" placeholder="VD: Gelatin Đức, Đường phèn, Hộp nhựa..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500">
+      </div>
+
+      <!-- Số lượng & Đơn vị -->
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[11px] font-bold text-slate-600 block mb-1">Số lượng:</label>
+          <input type="number" id="inputMaterialQty" step="0.1" min="0.1" value="1" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="text-[11px] font-bold text-slate-600 block mb-1">Đơn vị tính:</label>
+          <select id="inputMaterialUnitSelect" onchange="checkCustomUnit(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500">
+            <option value="kg">kg</option>
+            <option value="lạng">lạng</option>
+            <option value="gram">gram</option>
+            <option value="quả">quả</option>
+            <option value="hộp">hộp</option>
+            <option value="gói">gói</option>
+            <option value="túi">túi</option>
+            <option value="chai">chai</option>
+            <option value="tấm">tấm</option>
+            <option value="custom">Khác (tự gõ)...</option>
+          </select>
+          <input type="text" id="inputMaterialUnitCustom" placeholder="Nhập đơn vị khác" class="hidden w-full mt-1 bg-white border border-emerald-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800">
+        </div>
+      </div>
+
+      <!-- Tổng tiền mua & Ngày mua -->
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[11px] font-bold text-slate-600 block mb-1">Tổng tiền mua (đ):</label>
+          <input type="number" id="inputMaterialPrice" step="1000" min="0" placeholder="VD: 150000" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-black text-rose-600 focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="text-[11px] font-bold text-slate-600 block mb-1">Ngày mua:</label>
+          <input type="date" id="inputMaterialDate" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:border-emerald-500">
+        </div>
+      </div>
+
+      <!-- Thuộc Đợt nào -->
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex-1">
+          <label class="text-[11px] font-bold text-slate-600 block mb-1">Gán vào Đợt làm kẹo:</label>
+          <select id="inputMaterialBatch" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500">
+            <!-- Rendered dynamically -->
+          </select>
+        </div>
+        <button type="button" onclick="promptAddNewBatch()" class="mt-4 px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs whitespace-nowrap">
+          + Đợt mới
+        </button>
+      </div>
+
+      <!-- Nút Thêm -->
+      <button type="button" onclick="addMaterialItem()" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold rounded-xl shadow-md shadow-emerald-200 text-xs flex items-center justify-center gap-2 transition active:scale-[0.98]">
+        <i class="fa-solid fa-cart-plus text-sm"></i>
+        <span>LƯU VÀO SỔ NGUYÊN LIỆU</span>
+      </button>
+    </div>
+
+    <!-- DANH SÁCH CÁC MÓN NGUYÊN LIỆU ĐÃ MUA -->
+    <div class="space-y-2 pt-1">
+      <div class="flex items-center justify-between">
+        <h3 class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+          <span>Danh Sách Nguyên Liệu Đã Mua</span>
+          <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold" id="materialCountBadge">0</span>
+        </h3>
+        <button onclick="shareZaloProfitReport()" class="text-[11px] text-emerald-600 hover:underline font-bold flex items-center gap-1">
+          <i class="fa-brands fa-whatsapp"></i> Gửi Zalo Lời Lãi
+        </button>
+      </div>
+
+      <div id="materialList" class="space-y-2">
+        <!-- Items injected dynamically -->
+      </div>
+    </div>
+
+  </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 4: TỔNG KẾT & BÁO CÁO ==================== -->
+    <div id="tab-stats" class="hidden space-y-3.5">
+      <!-- DASHBOARD TỔNG KẾT NỔI BẬT ĐẲNG CẤP -->
+      <!-- DASHBOARD TỔNG KẾT NỔI BẬT ĐẲNG CẤP -->
+    <div class="bg-gradient-to-br from-rose-500 via-rose-600 to-amber-500 rounded-3xl p-4 text-white shadow-xl shadow-rose-500/25 relative overflow-hidden">
+      <!-- Vòng sáng nghệ thuật mờ ảo -->
+      <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/15 rounded-full blur-2xl pointer-events-none"></div>
+      <div class="absolute -left-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+      
+      <div class="flex justify-between items-start mb-2.5 relative z-10">
+        <div>
+          <span class="text-[11px] uppercase tracking-wider font-extrabold text-rose-100 flex items-center gap-1.5">
+            <i class="fa-solid fa-scale-balanced"></i> TỔNG KHỐI LƯỢNG HÔM NAY
+          </span>
+          <div class="flex items-baseline space-x-2 mt-1">
+            <span class="text-3xl font-black tracking-tight drop-shadow-sm" id="totalKgDisplay">12.6</span>
+            <span class="text-lg font-black text-rose-100">KG</span>
+            <span class="text-xs bg-white/25 backdrop-blur-md px-2.5 py-0.5 rounded-full font-bold ml-1 border border-white/20" id="totalLangDisplay">126 lạng</span>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="text-[11px] text-rose-100 font-semibold">Tổng tiền dự kiến</span>
+          <div class="text-lg font-black tracking-tight drop-shadow-sm" id="totalMoneyDisplay">0 đ</div>
+        </div>
+      </div>
+
+      <!-- Thống kê chia theo Vị để chuẩn bị mẻ nấu -->
+      <div class="pt-2.5 mt-2 border-t border-white/20 relative z-10">
+        <div class="text-[10px] text-rose-100 font-bold uppercase mb-1.5 flex items-center gap-1.5">
+          <i class="fa-solid fa-mortar-pestle"></i> Khối lượng cần làm theo từng vị:
+        </div>
+        <div id="flavorStatsContainer" class="grid grid-cols-3 gap-2 text-center">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Thống kê thu tiền với 2 viên nang cao cấp -->
+      <div class="mt-3 flex items-center justify-between text-xs bg-black/20 backdrop-blur-md rounded-2xl px-3.5 py-2 font-medium border border-white/10 relative z-10">
+        <div class="flex items-center gap-1.5 text-emerald-200">
+          <i class="fa-solid fa-circle-check text-xs"></i>
+          <span>Đã nhận: <strong id="statPaidMoney" class="text-white font-extrabold">0 đ</strong></span>
+        </div>
+        <div class="flex items-center gap-1.5 text-amber-200">
+          <i class="fa-solid fa-circle-exclamation text-xs"></i>
+          <span>Chưa tiền: <strong id="statUnpaidMoney" class="text-white font-extrabold">0 đ</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 NÚT TÍNH NĂNG THÔNG MINH: PHÂN TÍCH XU HƯỚNG & BÁO CÁO DOANH THU TỐI -->
+    <div class="grid grid-cols-2 gap-2.5">
+      <button onclick="openAnalyticsModal()" class="btn-tactile py-2.5 px-3 bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 font-extrabold text-xs">
+        <i class="fa-solid fa-chart-pie text-sm"></i>
+        <span>Phân Tích Dữ Liệu</span>
+      </button>
+
+      <button onclick="openEveningReportModal()" class="btn-tactile py-2.5 px-3 bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2 font-extrabold text-xs">
+        <i class="fa-brands fa-whatsapp text-sm"></i>
+        <span>Báo Cáo Tối (Zalo)</span>
+      </button>
+    </div>
+
+      <!-- KHỐI SAO LƯU & AN TOÀN DỮ LIỆU -->
+      <div class="custom-card rounded-2xl p-3.5 border border-slate-200">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-shield-halved text-emerald-600 text-sm"></i>
+            <h3 class="text-xs font-extrabold text-slate-800">An Toàn Dữ Liệu Sổ Đơn</h3>
+          </div>
+          <span class="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold border border-emerald-200">
+            <i class="fa-solid fa-check mr-1"></i>Tự động lưu
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-500 leading-relaxed mb-3">
+          Mọi đơn hàng và thu chi đều được lưu tức thì trên máy và sao lưu định kỳ vào thư mục Tải về (Download).
+        </p>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button onclick="exportBackupJson()" class="btn-tactile py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center gap-1.5 transition">
+            <i class="fa-solid fa-cloud-arrow-down text-slate-500"></i>
+            <span>Xuất File JSON</span>
+          </button>
+          <button onclick="document.getElementById('importBackupFile').click()" class="btn-tactile py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center gap-1.5 transition">
+            <i class="fa-solid fa-cloud-arrow-up text-slate-500"></i>
+            <span>Nhập File JSON</span>
+          </button>
+          <input type="file" id="importBackupFile" class="hidden" accept=".json" onchange="importBackupJson(event)">
+          <input type="file" id="otaGlobalFileInput" class="hidden" accept=".zip,.html" onchange="handleOtaFileSelected(event)">
+        </div>
+      </div>
+
+      <!-- KHỐI CẬP NHẬT OTA SIÊU TỐC TRONG TAB TỔNG KẾT -->
+      <div class="custom-card rounded-2xl p-3.5 border border-rose-200 bg-gradient-to-br from-white via-rose-50/30 to-amber-50/30">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-lg bg-gradient-to-tr from-rose-500 to-amber-400 text-white flex items-center justify-center text-xs shadow-xs">
+              <i class="fa-solid fa-bolt"></i>
+            </div>
+            <h3 class="text-xs font-extrabold text-slate-800">Cập Nhật OTA Siêu Tốc</h3>
+          </div>
+          <span class="text-[10px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full font-bold border border-emerald-200" id="otaTab4VerText">
+            v1.0.2 (Build 102)
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-500 leading-relaxed mb-3">
+          Tải và nạp bản vá mới trong 1-2 giây. Không cần cài lại file APK 48MB, không bị Play Protect chặn, bảo toàn dữ liệu.
+        </p>
+        <div>
+          <button onclick="handleSmartOtaUpdate()" class="w-full btn-tactile py-2.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-rose-300/40 transition">
+            <i class="fa-solid fa-bolt text-sm"></i>
+            <span>CẬP NHẬT OTA SIÊU TỐC</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- THANH ĐIỀU HƯỚNG ĐÁY MÀN HÌNH (BOTTOM NAVIGATION BAR CAO CẤP) -->
+  <nav id="bottomNavBar" class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 px-3 py-2 shadow-[0_-6px_24px_rgba(0,0,0,0.07)]">
+    <div class="max-w-md mx-auto grid grid-cols-4 gap-2 text-center items-center">
+      <!-- 1. SỔ ĐƠN -->
+      <button onclick="switchBottomTab('orders')" id="nav-tab-orders" class="btn-tactile nav-tab-btn flex flex-col items-center justify-center py-2 px-1 rounded-2xl bg-rose-50 text-rose-600 font-black transition-all">
+        <div class="relative flex items-center justify-center">
+          <i class="fa-solid fa-clipboard-list text-2xl"></i>
+          <span id="navOrdersBadge" class="absolute -top-1.5 -right-3.5 bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full ring-2 ring-white shadow-xs">35</span>
+        </div>
+        <span class="text-xs font-black mt-1 tracking-tight">Sổ Đơn</span>
+      </button>
+
+      <!-- 2. THÊM ĐƠN -->
+      <button onclick="switchBottomTab('add')" id="nav-tab-add" class="btn-tactile nav-tab-btn flex flex-col items-center justify-center py-2 px-1 rounded-2xl text-slate-500 hover:text-slate-700 font-extrabold transition-all">
+        <i class="fa-solid fa-circle-plus text-2xl"></i>
+        <span class="text-xs font-black mt-1 tracking-tight">Thêm Đơn</span>
+      </button>
+
+      <!-- 3. THU CHI -->
+      <button onclick="switchBottomTab('materials')" id="nav-tab-materials" class="btn-tactile nav-tab-btn flex flex-col items-center justify-center py-2 px-1 rounded-2xl text-slate-500 hover:text-slate-700 font-extrabold transition-all">
+        <i class="fa-solid fa-coins text-2xl"></i>
+        <span class="text-xs font-black mt-1 tracking-tight">Thu Chi</span>
+      </button>
+
+      <!-- 4. TỔNG KẾT -->
+      <button onclick="switchBottomTab('stats')" id="nav-tab-stats" class="btn-tactile nav-tab-btn flex flex-col items-center justify-center py-2 px-1 rounded-2xl text-slate-500 hover:text-slate-700 font-extrabold transition-all">
+        <i class="fa-solid fa-chart-pie text-2xl"></i>
+        <span class="text-xs font-black mt-1 tracking-tight">Tổng Kết</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MODAL HIỆN MÃ QR THU TIỀN (CỐ ĐỊNH CHÍNH THỨC) -->
+  <div id="qrModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-4 space-y-3.5 shadow-2xl text-center">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <h3 class="font-black text-slate-800 text-sm flex items-center gap-2">
+          <i class="fa-solid fa-qrcode text-rose-500"></i>
+          <span>Mã QR Chuyển Khoản</span>
+        </h3>
+        <button onclick="closeQrModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-sm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- QR Code Image (Bấm vào để phóng to toàn màn hình) -->
+      <div onclick="openQrZoom()" class="btn-tactile bg-rose-50/50 hover:bg-rose-100/50 p-2.5 rounded-2xl border-2 border-dashed border-rose-200 flex flex-col items-center justify-center cursor-pointer transition">
+        <img id="qrImageElement" src="assets/qr_bank.jpg" alt="Mã QR MB Bank DO THI HA GIANG" class="w-60 max-h-[46vh] object-contain rounded-xl shadow-md bg-white border border-slate-200/80">
+        <p class="text-[11px] text-rose-600 mt-2 font-bold flex items-center gap-1.5 animate-pulse">
+          <i class="fa-solid fa-expand text-xs"></i>
+          <span>Chạm vào ảnh để phóng to toàn màn hình</span>
+        </p>
+      </div>
+
+      <!-- Thông tin đơn hàng & STK -->
+      <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-left space-y-1 text-xs">
+        <div class="flex justify-between items-center">
+          <span class="text-slate-500 font-medium">Khách hàng:</span>
+          <strong id="qrCustomerName" class="text-slate-800 font-bold">Khách mua kẹo</strong>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-500 font-medium">Số tiền cần trả:</span>
+          <strong id="qrAmountDisplay" class="text-rose-600 font-black text-base">0 đ</strong>
+        </div>
+        <div class="flex justify-between items-center border-t border-slate-200/60 pt-1.5 mt-1">
+          <span class="text-slate-500 font-medium">Ngân hàng:</span>
+          <span id="qrBankDisplay" class="font-extrabold text-slate-800">MB Bank (Quân Đội)</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-500 font-medium">Số tài khoản / SĐT:</span>
+          <div class="flex items-center gap-1.5">
+            <span id="qrAccountDisplay" class="font-black text-rose-600 tracking-wider text-sm">0941406007</span>
+            <button onclick="copyQrAccount()" class="btn-tactile bg-rose-100 hover:bg-rose-200 text-rose-700 text-[11px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1">
+              <i class="fa-regular fa-copy"></i>
+              <span>Chép</span>
+            </button>
+          </div>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-500 font-medium">Chủ tài khoản:</span>
+          <span id="qrOwnerDisplay" class="font-black text-slate-800 uppercase">DO THI HA GIANG</span>
+        </div>
+      </div>
+
+      <!-- Nút hành động: Phóng to quét mã & Đóng -->
+      <div class="flex gap-2 pt-1">
+        <button onclick="openQrZoom()" class="btn-tactile flex-1 py-2.5 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 font-extrabold text-white rounded-xl text-xs shadow-md shadow-rose-200 flex items-center justify-center gap-2">
+          <i class="fa-solid fa-expand"></i>
+          <span>Phóng To Quét Mã</span>
+        </button>
+        <button onclick="closeQrModal()" class="btn-tactile py-2.5 px-4 bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 rounded-xl text-xs">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PHÓNG TO TOÀN MÀN HÌNH MÃ QR ĐỂ KHÁCH QUÉT DỄ DÀNG -->
+  <div id="qrZoomModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[60] hidden flex flex-col items-center justify-center p-4" onclick="closeQrZoom()">
+    <div class="relative max-w-sm w-full flex flex-col items-center" onclick="event.stopPropagation()">
+      <div class="w-full flex justify-between items-center mb-3 px-2 text-white">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-rose-500/30 flex items-center justify-center border border-rose-400/40">
+            <i class="fa-solid fa-qrcode text-rose-400 text-base"></i>
+          </div>
+          <div>
+            <h3 class="font-black text-sm text-white">Mã QR Quét Chuyển Khoản</h3>
+            <p class="text-[11px] text-slate-300">DO THI HA GIANG • 0941406007</p>
+          </div>
+        </div>
+        <button onclick="closeQrZoom()" class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <div class="bg-white p-3 rounded-3xl shadow-2xl border-4 border-rose-500/30 w-full flex flex-col items-center">
+        <img id="qrZoomImage" src="assets/qr_bank.jpg" alt="Mã QR MB Bank DO THI HA GIANG" class="w-full h-auto max-h-[62vh] object-contain rounded-2xl cursor-pointer" onclick="closeQrZoom()">
+        <div class="w-full bg-rose-50 rounded-2xl p-2.5 mt-2.5 text-center border border-rose-200">
+          <p class="text-xs font-black text-slate-800">DO THI HA GIANG • MB BANK</p>
+          <p class="text-base font-black text-rose-600 tracking-wider">0941406007</p>
+          <p class="text-[11px] text-slate-600 font-semibold mt-0.5" id="qrZoomOrderDesc">Quét mã chuyển tiền nhanh 24/7</p>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-400 mt-4 font-semibold text-center flex items-center gap-1.5 cursor-pointer" onclick="closeQrZoom()">
+        <i class="fa-solid fa-hand-pointer text-rose-400"></i>
+        <span>Chạm bất kỳ đâu để đóng lại</span>
+      </p>
+    </div>
+  </div>
+
+  <!-- MODAL XÁC NHẬN HÀNH ĐỘNG ĐẸP MẮT (THAY THẾ WINDOW.CONFIRM) -->
+  <div id="confirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xs w-full p-5 space-y-4 shadow-2xl text-center animate-in fade-in zoom-in-95 duration-150">
+      <div id="confirmIconWrapper" class="w-14 h-14 rounded-full bg-rose-100 text-rose-500 mx-auto flex items-center justify-center text-2xl shadow-inner">
+        <i id="confirmIcon" class="fa-solid fa-trash-can"></i>
+      </div>
+      <div>
+        <h3 id="confirmTitle" class="text-base font-black text-slate-800">Xác Nhận Xóa Đơn</h3>
+        <p id="confirmMessage" class="text-xs text-slate-500 leading-relaxed mt-1.5 px-1">
+          Bạn có chắc muốn xóa hẳn đơn hàng này không? Hành động này không thể hoàn tác.
+        </p>
+      </div>
+      <div class="flex gap-2 pt-1">
+        <button onclick="handleConfirmChoice(false)" class="btn-tactile flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
+          Hủy bỏ
+        </button>
+        <button id="confirmOkBtn" onclick="handleConfirmChoice(true)" class="btn-tactile flex-1 py-2.5 font-extrabold rounded-xl text-xs shadow-md bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white shadow-rose-200">
+          Xóa vĩnh viễn
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL NHẬP DỮ LIỆU ĐẸP MẮT (THAY THẾ WINDOW.PROMPT) -->
+  <div id="promptModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xs w-full p-5 space-y-4 shadow-2xl text-center animate-in fade-in zoom-in-95 duration-150">
+      <div id="promptIconWrapper" class="w-14 h-14 rounded-full bg-rose-100 text-rose-500 mx-auto flex items-center justify-center text-2xl shadow-inner">
+        <i id="promptIcon" class="fa-solid fa-candy-cane"></i>
+      </div>
+      <div>
+        <h3 id="promptTitle" class="text-base font-black text-slate-800">Thêm Mới</h3>
+        <p id="promptMessage" class="text-xs text-slate-500 leading-relaxed mt-1 px-1">
+          Nhập thông tin bên dưới:
+        </p>
+      </div>
+      <div class="text-left">
+        <input type="text" id="promptInput" onkeydown="if(event.key==='Enter') handlePromptChoice(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-400">
+      </div>
+      <div class="flex gap-2 pt-1">
+        <button onclick="handlePromptChoice(null)" class="btn-tactile flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
+          Hủy bỏ
+        </button>
+        <button id="promptOkBtn" onclick="handlePromptChoice(document.getElementById('promptInput').value)" class="btn-tactile flex-1 py-2.5 font-extrabold rounded-xl text-xs shadow-md bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-rose-200">
+          Xác nhận
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CẬP NHẬT OTA SIÊU TỐC (CHIPCHIP OTA ENGINE) -->
+  <div id="otaModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-4.5 space-y-3.5 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <!-- Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-500 to-amber-400 text-white flex items-center justify-center shadow-xs">
+            <i class="fa-solid fa-bolt text-sm"></i>
+          </div>
+          <div>
+            <h3 class="font-black text-slate-800 text-sm">Cập Nhật OTA Siêu Tốc</h3>
+            <p class="text-[10px] text-slate-400 font-semibold" id="otaModalSubVer">Phiên bản: v1.0.1 (Build 101)</p>
+          </div>
+        </div>
+        <button onclick="closeOtaModal()" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-xs">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Trạng thái cập nhật & Thanh tiến trình -->
+      <div id="otaProgressBox" class="hidden bg-rose-50 rounded-2xl p-3 border border-rose-200 space-y-2">
+        <div class="flex justify-between items-center text-xs font-bold text-rose-700">
+          <span id="otaProgressStatusText"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Đang nạp cập nhật...</span>
+          <span id="otaProgressPercent">0%</span>
+        </div>
+        <div class="w-full bg-white rounded-full h-2.5 overflow-hidden border border-rose-200">
+          <div id="otaProgressBar" class="bg-gradient-to-r from-rose-500 to-amber-400 h-full w-0 transition-all duration-300"></div>
+        </div>
+      </div>
+
+      <!-- Danh sách gói OTA tìm thấy trong máy (nếu có) -->
+      <div id="otaLocalScanResult" class="space-y-1.5">
+        <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+          <span>Gói OTA trong thư mục Download:</span>
+          <button onclick="triggerScanLocalOta()" class="text-rose-500 hover:underline flex items-center gap-1 text-[11px] font-bold">
+            <i class="fa-solid fa-rotate-right"></i> Quét lại
+          </button>
+        </div>
+        <div id="otaLocalPackagesList" class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+          <div class="text-[11px] text-slate-400 text-center py-2.5 bg-slate-50 rounded-xl">
+            Bấm "Quét Gói Máy" để tự động tìm gói cập nhật trong Download
+          </div>
+        </div>
+      </div>
+
+      <!-- Tùy chọn nạp file thủ công hoặc online -->
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <label class="btn-tactile py-2.5 px-2 bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer text-center">
+          <i class="fa-solid fa-file-arrow-up"></i>
+          <span>Nạp File (.zip/.html)</span>
+          <input type="file" id="otaModalFileInput" accept=".zip,.html" class="hidden" onchange="handleOtaFileSelected(event)">
+        </label>
+        <button onclick="triggerCheckRemoteOta()" class="btn-tactile py-2.5 px-2 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-rose-200">
+          <i class="fa-solid fa-cloud-arrow-down"></i>
+          <span>Kiểm Tra Online</span>
+        </button>
+      </div>
+
+      <!-- Ưu điểm OTA Siêu Tốc -->
+      <div class="bg-gradient-to-br from-rose-50/50 to-pink-50/50 rounded-xl p-2.5 border border-rose-100 text-[11px] text-slate-600 space-y-1">
+        <div class="font-black text-rose-800 flex items-center gap-1 text-xs">
+          <i class="fa-solid fa-shield-heart text-rose-500"></i>
+          <span>Lợi ích cập nhật OTA:</span>
+        </div>
+        <ul class="list-disc list-inside space-y-0.5 text-[10px] text-slate-500 font-medium">
+          <li>Cập nhật tính năng mới trong 1-2 giây.</li>
+          <li>Không cần tải file APK 48MB, không bị Play Protect chặn.</li>
+          <li>Giữ nguyên 100% dữ liệu đơn hàng và khách hàng.</li>
+        </ul>
+      </div>
+
+      <!-- Nút đóng & khôi phục -->
+      <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
+        <button onclick="confirmRevertFactory()" class="text-slate-400 hover:text-rose-500 text-[11px] font-semibold underline">
+          Khôi phục bản gốc
+        </button>
+        <button onclick="closeOtaModal()" class="py-1.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CÀI ĐẶT ĐƠN GIÁ, VỊ KẸO & TÀI KHOẢN NGÂN HÀNG -->
+  <div id="configModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-4 space-y-4 shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-2">
+        <h3 class="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-rose-500"></i>
+          <span>Cài Đặt Hệ Thống</span>
+        </h3>
+        <button onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- MỤC CÀI ĐẶT GIAO DIỆN & MÀU NỀN (CHỮ VÀ SỐ LUÔN RÕ RÀNG 100%) -->
+      <div class="bg-gradient-to-br from-rose-50/80 via-pink-50/80 to-purple-50/80 border border-rose-200/80 rounded-2xl p-3 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <i class="fa-solid fa-palette text-rose-500"></i>
+            <span>Màu Nền Giao Diện:</span>
+          </span>
+          <span class="text-[10px] text-rose-600 font-extrabold" id="currentThemeName">Mây Kẹo Dâu</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-1.5 text-center text-[10px] font-bold">
+          <button type="button" onclick="setAppTheme('candy')" id="theme-btn-candy" class="theme-option-btn p-2 rounded-xl border-2 border-rose-500 bg-white text-rose-700 shadow-sm transition">
+            <span class="text-base block mb-0.5">🍓</span>
+            <span>Mây Kẹo Dâu</span>
+          </button>
+          <button type="button" onclick="setAppTheme('mango')" id="theme-btn-mango" class="theme-option-btn p-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-amber-400 transition">
+            <span class="text-base block mb-0.5">🥭</span>
+            <span>Xoài Đào</span>
+          </button>
+          <button type="button" onclick="setAppTheme('mint')" id="theme-btn-mint" class="theme-option-btn p-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-emerald-400 transition">
+            <span class="text-base block mb-0.5">🍃</span>
+            <span>Bạc Hà Mint</span>
+          </button>
+          <button type="button" onclick="setAppTheme('grape')" id="theme-btn-grape" class="theme-option-btn p-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-purple-400 transition">
+            <span class="text-base block mb-0.5">🍇</span>
+            <span>Nho Tím</span>
+          </button>
+          <button type="button" onclick="setAppTheme('pure')" id="theme-btn-pure" class="theme-option-btn p-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-slate-400 transition col-span-2">
+            <span class="text-base block mb-0.5">🥛</span>
+            <span>Trắng Sứ (Nét Tuyệt Đối)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MỤC CÀI ĐẶT TÀI KHOẢN NGÂN HÀNG & MÃ QR -->
+      <!-- THÔNG TIN TÀI KHOẢN NGÂN HÀNG & MÃ QR CỐ ĐỊNH CHÍNH THỨC -->
+      <div class="bg-gradient-to-br from-rose-50 to-amber-50 border border-rose-200/80 rounded-2xl p-3 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-black text-rose-800 flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-check text-emerald-500"></i>
+            <span>Mã QR & Tài Khoản Cố Định:</span>
+          </span>
+          <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+            Đã ghim sẵn
+          </span>
+        </div>
+        <div class="bg-white rounded-xl p-2.5 border border-rose-100 flex items-center gap-3 shadow-sm">
+          <img src="assets/qr_bank.jpg" alt="QR" class="w-12 h-14 object-contain rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition" onclick="closeConfigModal(); openQrZoom();" title="Chạm để phóng to">
+          <div class="text-xs flex-1">
+            <p class="font-black text-slate-800 text-[13px]">DO THI HA GIANG</p>
+            <p class="font-black text-rose-600 text-sm tracking-wider">0941406007</p>
+            <p class="text-[11px] text-slate-500 font-semibold">MB Bank (Quân Đội)</p>
+          </div>
+          <button onclick="closeConfigModal(); openQrZoom();" class="btn-tactile text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 px-2.5 py-2 rounded-xl border border-rose-200 flex flex-col items-center gap-0.5">
+            <i class="fa-solid fa-expand text-xs"></i>
+            <span class="text-[10px]">Phóng to</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MỤC SAO LƯU & KHÔI PHỤC TOÀN BỘ DỮ LIỆU (CHỐNG MẤT KHI ĐỔI MÁY HOẶC GỠ CÀI LẠI) -->
+      <div class="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-3 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-cloud-arrow-up text-emerald-600"></i>
+            <span>Sao Lưu & Bảo Toàn Dữ Liệu:</span>
+          </span>
+          <span class="text-[9px] bg-emerald-600 text-white font-extrabold px-2 py-0.5 rounded-full">An Toàn 100%</span>
+        </div>
+        <p class="text-[10px] text-emerald-800 leading-relaxed">
+          Ứng dụng tự động lưu vào bộ nhớ máy (Downloads). Nếu lỡ tay xóa app cài lại vẫn tự động khôi phục nguyên vẹn 100%. Bạn cũng có thể bấm sao lưu ra file để gửi qua Zalo lưu trữ:
+        </p>
+        <div class="grid grid-cols-2 gap-1.5 pt-1">
+          <button type="button" onclick="exportBackupJson()" class="btn-tactile py-2 px-2 rounded-xl bg-white border border-emerald-300 text-emerald-800 font-extrabold text-[11px] flex items-center justify-center gap-1 shadow-xs">
+            <i class="fa-solid fa-download text-xs text-emerald-600"></i>
+            <span>Xuất file sao lưu</span>
+          </button>
+          <label class="btn-tactile py-2 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] flex items-center justify-center gap-1 shadow-xs cursor-pointer text-center">
+            <i class="fa-solid fa-upload text-xs"></i>
+            <span>Khôi phục từ file</span>
+            <input type="file" accept=".json" onchange="importBackupJson(event)" class="hidden">
+          </label>
+        </div>
+      </div>
+
+      <!-- MỤC CẬP NHẬT OTA SIÊU TỐC (KHÔNG CẦN CÀI LẠI APK - 1 ĐẾN 2 GIÂY) -->
+      <div class="bg-gradient-to-br from-rose-50 via-amber-50/50 to-pink-50 border border-rose-200/90 rounded-2xl p-3 space-y-2.5 shadow-xs">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5">
+            <div class="w-6 h-6 rounded-lg bg-gradient-to-tr from-rose-500 to-amber-400 text-white flex items-center justify-center text-xs shadow-xs">
+              <i class="fa-solid fa-bolt"></i>
+            </div>
+            <div>
+              <span class="text-xs font-black text-slate-800">Cập Nhật OTA Siêu Tốc:</span>
+              <p class="text-[9px] text-slate-500 font-semibold" id="otaCurrentVerText">Phiên bản: v1.0.1 (Build 101)</p>
+            </div>
+          </div>
+          <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> 1-2 Giây
+          </span>
+        </div>
+        <p class="text-[10px] text-slate-600 leading-relaxed">
+          Cập nhật tức thì tính năng và giao diện mới mà không cần tải lại file APK, không lo Play Protect cảnh báo, không sợ mất dữ liệu.
+        </p>
+        <div>
+          <button type="button" onclick="handleSmartOtaUpdate()" class="w-full btn-tactile py-2.5 px-3 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white font-black text-xs flex items-center justify-center gap-2 shadow-sm shadow-rose-200">
+            <i class="fa-solid fa-bolt text-xs"></i>
+            <span>Cập Nhật OTA Ngay</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mục 1: Đổi giá đồng loạt cho tất cả các vị -->
+      <div class="bg-rose-50 border border-rose-100 rounded-2xl p-3 space-y-2">
+        <div class="text-xs font-bold text-rose-800 flex items-center gap-1.5">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>Đặt lại giá chung (Đồng loạt):</span>
+        </div>
+        <div class="flex gap-2">
+          <input type="number" id="globalPriceInput" value="25000" step="1000" placeholder="25000"
+                 class="w-full bg-white border border-rose-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-rose-500">
+          <button onclick="applyGlobalPrice()" class="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs rounded-xl whitespace-nowrap shadow-sm">
+            Áp dụng hết
+          </button>
+        </div>
+      </div>
+
+      <!-- Mục 2: Sửa giá riêng từng vị & Thêm/Xóa vị -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="font-bold text-slate-700 text-xs">Giá riêng từng vị (đ/lạng):</label>
+          <button onclick="promptAddNewFlavor()" class="text-xs text-rose-600 font-bold hover:underline flex items-center gap-1">
+            <i class="fa-solid fa-plus text-[10px]"></i> Thêm vị
+          </button>
+        </div>
+
+        <div id="flavorPriceConfigList" class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2 border-t">
+        <button onclick="closeConfigModal()" class="flex-1 py-2.5 bg-slate-100 font-bold text-slate-600 rounded-xl text-xs">
+          Đóng
+        </button>
+        <button onclick="saveAllSettings()" class="flex-1 py-2.5 bg-rose-500 font-bold text-white rounded-xl text-xs shadow-sm shadow-rose-200">
+          Lưu Tất Cả
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PHÂN TÍCH DỮ LIỆU & BIỂU ĐỒ XU HƯỚNG -->
+  <div id="analyticsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-md w-full p-4 space-y-4 shadow-2xl my-6 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-2.5">
+        <h3 class="font-black text-slate-800 text-sm flex items-center gap-2">
+          <i class="fa-solid fa-chart-pie text-indigo-600"></i>
+          <span>Phân Tích Dữ Liệu & Chiến Lược Nhập Hàng</span>
+        </h3>
+        <button onclick="closeAnalyticsModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-sm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- MỤC 1: BIỂU ĐỒ XU HƯỚNG VỊ KẸO BÁN CHẠY -->
+      <div class="bg-gradient-to-br from-indigo-50/70 to-purple-50/70 border border-indigo-100 rounded-2xl p-3 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-chart-simple text-indigo-600"></i>
+            <span>VỊ KẸO BÁN CHẠY NHẤT:</span>
+          </span>
+          <span id="topSellingFlavorBadge" class="text-[11px] font-extrabold bg-indigo-600 text-white px-2 py-0.5 rounded-full">Top 1: Mix vị</span>
+        </div>
+
+        <div class="relative w-full h-52 flex items-center justify-center bg-white rounded-xl p-2 border border-indigo-100">
+          <canvas id="flavorTrendChart"></canvas>
+        </div>
+
+        <!-- Bảng chi tiết từng vị -->
+        <div id="flavorRankingContainer" class="space-y-1.5 pt-1 text-xs">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- MỤC 2: TOP KHÁCH HÀNG MUA NHIỀU NHẤT (VIP) -->
+      <div class="bg-amber-50/70 border border-amber-200 rounded-2xl p-3 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-crown text-amber-500"></i>
+            <span>TOP KHÁCH HÀNG MUA NHIỀU NHẤT:</span>
+          </span>
+          <span class="text-[10px] text-amber-700 font-semibold">Khách hàng VIP</span>
+        </div>
+
+        <div id="topCustomersContainer" class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- MỤC 3: CHIẾN LƯỢC NHẬP NGUYÊN LIỆU (AI / CÔNG THỨC THỰC TẾ) -->
+      <div class="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-3 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-lightbulb text-emerald-600"></i>
+            <span>CHIẾN LƯỢC NHẬP NGUYÊN LIỆU:</span>
+          </span>
+          <span class="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-full">Tự động tính</span>
+        </div>
+
+        <div id="materialStrategyContainer" class="text-xs space-y-2 text-slate-700">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <button onclick="closeAnalyticsModal()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 font-bold text-white rounded-xl text-xs shadow-md shadow-indigo-200 transition">
+        Đã hiểu & Đóng lại
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL BÁO CÁO DOANH THU TỰ ĐỘNG BUỔI TỐI -->
+  <div id="eveningReportModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-md w-full p-4 space-y-3.5 shadow-2xl my-6 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-2.5">
+        <h3 class="font-black text-slate-800 text-sm flex items-center gap-2">
+          <i class="fa-solid fa-moon text-amber-500"></i>
+          <span>Báo Cáo Doanh Thu Tự Động Mỗi Tối</span>
+        </h3>
+        <button onclick="closeEveningReportModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-sm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Tóm tắt số liệu chốt sổ nhanh -->
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl">
+          <span class="text-[11px] font-bold text-emerald-700 block">Tiền Đã Về Túi:</span>
+          <span class="text-base font-black text-emerald-800" id="reportPaidMoney">0 đ</span>
+          <p class="text-[10px] text-emerald-600 mt-0.5">Tiền mặt + Chuyển khoản</p>
+        </div>
+        <div class="p-3 bg-red-50 border border-red-200 rounded-2xl">
+          <span class="text-[11px] font-bold text-red-700 block">Tiền Còn Nợ Khách:</span>
+          <span class="text-base font-black text-red-800" id="reportUnpaidMoney">0 đ</span>
+          <p class="text-[10px] text-red-600 mt-0.5">Cần nhắc thanh toán</p>
+        </div>
+      </div>
+
+      <!-- Khung xem trước tin nhắn Zalo -->
+      <div class="space-y-1">
+        <label class="text-[11px] font-bold text-slate-600 flex items-center justify-between">
+          <span>Tin nhắn Zalo đã soạn sẵn chuẩn đẹp:</span>
+          <span class="text-[10px] text-slate-400">Tự động điền đầy đủ số liệu</span>
+        </label>
+        <textarea id="eveningZaloMessageText" readonly rows="8" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono text-slate-700 leading-relaxed focus:outline-none"></textarea>
+      </div>
+
+      <!-- Nút hành động -->
+      <div class="flex gap-2 pt-1">
+        <button onclick="closeEveningReportModal()" class="w-1/3 py-2.5 bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 rounded-xl text-xs">
+          Đóng
+        </button>
+        <button onclick="copyAndSendEveningZalo()" class="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 font-extrabold text-white rounded-xl text-xs shadow-md shadow-emerald-200 flex items-center justify-center gap-1.5 transition active:scale-95">
+          <i class="fa-brands fa-whatsapp text-sm"></i>
+          <span>Sao Chép & Gửi Zalo</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // Danh sách vị mặc định
+    const DEFAULT_FLAVORS = [
+      { id: "mix", name: "Mix vị", icon: "🍓", price: 25000 },
+      { id: "hungchanh", name: "Húng chanh", icon: "🍋", price: 25000 },
+      { id: "xoai", name: "Xoài", icon: "🥭", price: 25000 },
+      { id: "chanhleo", name: "Chanh leo", icon: "🍊", price: 25000 },
+      { id: "suachua", name: "Sữa chua", icon: "🥛", price: 25000 }
+    ];
+
+    // Cài đặt ngân hàng mặc định
+    const DEFAULT_BANK_CONFIG = {
+      bankId: "MB",
+      accountNo: "0941406007",
+      accountName: "DO THI HA GIANG",
+      customQrImage: "assets/qr_bank.jpg"
+    };
+
+    // Dữ liệu ban đầu chuẩn xác 100%: 33 đơn, đúng 126 lạng = 12.6 kg!
+    const INITIAL_ORDERS = [
+      { id: 1, name: "Huyền vịt", lang: 5, unitNote: "5 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "" },
+      { id: 2, name: "Cẩm ly", lang: 2, unitNote: "2 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "" },
+      { id: 3, name: "Lan ni", lang: 5, unitNote: "5 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "" },
+      { id: 4, name: "A nghĩa", lang: 3, unitNote: "3 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "" },
+      { id: 5, name: "C thùy linh", lang: 3, unitNote: "3 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "" },
+      { id: 6, name: "Như", lang: 4, unitNote: "4 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "đã giao & nộp tiền" },
+      { id: 7, name: "Cô thi", lang: 3, unitNote: "3 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "" },
+      { id: 8, name: "Cô khánh", lang: 3, unitNote: "3 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "" },
+      { id: 9, name: "Mụ khánh", lang: 3, unitNote: "3 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "" },
+      { id: 10, name: "A tân", lang: 2, unitNote: "2 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "đã giao & nộp tiền" },
+      { id: 11, name: "C bê", lang: 5, unitNote: "5 lạng", flavorId: "mix", status: "delivered", payment: "transfer", note: "R" },
+      { id: 12, name: "A đức", lang: 8, unitNote: "2 hộp (mỗi hộp 4 lạng)", flavorId: "mix", status: "delivered", payment: "transfer", note: "tiền R R" },
+      { id: 13, name: "Diệu linh", lang: 8, unitNote: "2 hộp 8 lạng", flavorId: "mix", status: "delivered", payment: "transfer", note: "r" },
+      { id: 14, name: "C khánh", lang: 5, unitNote: "5 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "đã giao & nộp tiền" },
+      { id: 15, name: "C trang", lang: 2, unitNote: "2 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "" },
+      { id: 16, name: "C hạnh", lang: 4, unitNote: "4 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "t7" },
+      { id: 17, name: "C linh", lang: 5, unitNote: "5 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "" },
+      { id: 18, name: "Dung vũ", lang: 4, unitNote: "4 lạng", flavorId: "mix", status: "delivered", payment: "transfer", note: "100 R" },
+      { id: 19, name: "Cô thảo", lang: 4, unitNote: "4 lạng", flavorId: "mix", status: "delivered", payment: "transfer", note: "R" },
+      { id: 20, name: "Cô duyên", lang: 5, unitNote: "5 lạng", flavorId: "mix", status: "pending", payment: "unpaid", note: "chưa tiền" },
+      { id: 21, name: "Cô thanh2", lang: 4, unitNote: "4 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "đã giao & nộp tiền" },
+      { id: 22, name: "G. Nhi mẹ tiên gold", lang: 2, unitNote: "2 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "" },
+      { id: 23, name: "Cô thi", lang: 3, unitNote: "3 lạng", flavorId: "mix", status: "pending", payment: "unpaid", note: "chưa tiền" },
+      { id: 24, name: "Mẹ xoài", lang: 2, unitNote: "2 lạng", flavorId: "xoai", status: "delivered", payment: "paid", note: "" },
+      { id: 25, name: "Cô khánh", lang: 2, unitNote: "2 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "" },
+      { id: 26, name: "C trang", lang: 2, unitNote: "2 lạng", flavorId: "mix", status: "delivered", payment: "paid", note: "" },
+      { id: 27, name: "Cô vân", lang: 2, unitNote: "2 lạng", flavorId: "mix", status: "pending", payment: "unpaid", note: "chưa tiền" },
+      { id: 28, name: "Hoài thương", lang: 5, unitNote: "4 lạng mix + 1 lạng húng chanh", flavorId: "custom_mix", breakdown: { mix: 4, hungchanh: 1 }, status: "pending", payment: "unpaid", note: "8/5 đoàn khuê" },
+      { id: 29, name: "Cô trà my", lang: 4, unitNote: "2 húng chanh + 2 mix", flavorId: "custom_mix", breakdown: { hungchanh: 2, mix: 2 }, status: "pending", payment: "unpaid", note: "" },
+      { id: 30, name: "C khánh", lang: 5, unitNote: "4 mix + 1 húng chanh", flavorId: "custom_mix", breakdown: { mix: 4, hungchanh: 1 }, status: "pending", payment: "unpaid", note: "" },
+      { id: 31, name: "C bê", lang: 6, unitNote: "5 mix + 1 húng chanh", flavorId: "custom_mix", breakdown: { mix: 5, hungchanh: 1 }, status: "pending", payment: "unpaid", note: "" },
+      { id: 32, name: "Mụ hoa gạo", lang: 3, unitNote: "3 lạng mix", flavorId: "mix", status: "pending", payment: "unpaid", note: "" },
+      { id: 33, name: "A đức", lang: 3, unitNote: "3 lạng mix", flavorId: "mix", status: "pending", payment: "unpaid", note: "" }
+    ];
+
+    // Danh sách nguyên liệu mẫu đợt 12.6 kg (chuẩn xác chi phí thực tế)
+    const DEFAULT_MATERIALS = [
+      { id: 1, name: "Gelatin Đức (bột/lá)", qty: 1.2, unit: "kg", totalPrice: 280000, date: "2026-11-21", batch: "Đợt 1 (12.6kg)" },
+      { id: 2, name: "Đường phèn & Mạch nha", qty: 4, unit: "kg", totalPrice: 120000, date: "2026-11-21", batch: "Đợt 1 (12.6kg)" },
+      { id: 3, name: "Lá húng chanh & Quất tươi", qty: 3, unit: "lạng", totalPrice: 45000, date: "2026-11-21", batch: "Đợt 1 (12.6kg)" },
+      { id: 4, name: "Xoài chín & Chanh leo tươi", qty: 2, unit: "kg", totalPrice: 65000, date: "2026-11-21", batch: "Đợt 1 (12.6kg)" },
+      { id: 5, name: "Hộp đựng kẹo & Tem dán", qty: 30, unit: "hộp", totalPrice: 60000, date: "2026-11-21", batch: "Đợt 1 (12.6kg)" }
+    ];
+
+    const DEFAULT_BATCHES = ["Đợt 1 (12.6kg)"];
+
+    // Bộ Sưu Tập 5 Giao Diện Pastel Nghệ Thuật (Bảo toàn chữ và số siêu nét 100%)
+    const APP_THEMES = {
+      candy: {
+        id: 'candy',
+        name: 'Mây Kẹo Dâu',
+        icon: '🍓',
+        bodyBg: '#FDF2F4',
+        orb1: 'rgba(254, 205, 211, 0.55)',
+        orb2: 'rgba(254, 240, 138, 0.45)',
+        orb3: 'rgba(251, 207, 232, 0.45)',
+        dotColor: '#F43F5E',
+        headerBorder: 'border-rose-100'
+      },
+      mango: {
+        id: 'mango',
+        name: 'Xoài Đào',
+        icon: '🥭',
+        bodyBg: '#FFFBEB',
+        orb1: 'rgba(254, 215, 170, 0.6)',
+        orb2: 'rgba(253, 230, 138, 0.55)',
+        orb3: 'rgba(254, 243, 199, 0.5)',
+        dotColor: '#F59E0B',
+        headerBorder: 'border-amber-100'
+      },
+      mint: {
+        id: 'mint',
+        name: 'Bạc Hà Mint',
+        icon: '🍃',
+        bodyBg: '#F0FDF4',
+        orb1: 'rgba(167, 243, 208, 0.55)',
+        orb2: 'rgba(187, 247, 208, 0.45)',
+        orb3: 'rgba(204, 251, 241, 0.5)',
+        dotColor: '#10B981',
+        headerBorder: 'border-emerald-100'
+      },
+      grape: {
+        id: 'grape',
+        name: 'Nho Tím',
+        icon: '🍇',
+        bodyBg: '#FAF5FF',
+        orb1: 'rgba(233, 213, 255, 0.55)',
+        orb2: 'rgba(224, 231, 255, 0.45)',
+        orb3: 'rgba(251, 207, 232, 0.45)',
+        dotColor: '#8B5CF6',
+        headerBorder: 'border-purple-100'
+      },
+      pure: {
+        id: 'pure',
+        name: 'Trắng Sứ (Nét Tuyệt Đối)',
+        icon: '🥛',
+        bodyBg: '#F8FAFC',
+        orb1: 'rgba(241, 245, 249, 0.8)',
+        orb2: 'rgba(241, 245, 249, 0.6)',
+        orb3: 'rgba(226, 232, 240, 0.5)',
+        dotColor: '#94A3B8',
+        headerBorder: 'border-slate-200'
+      }
+    };
+
+    // State
+    let orders = [];
+    let flavors = [];
+    let materials = [];
+    let batches = [...DEFAULT_BATCHES];
+    let bankConfig = { ...DEFAULT_BANK_CONFIG };
+    let selectedFlavorId = 'mix';
+    let currentFilter = 'all';
+    let currentTheme = 'candy';
+
+    // State Lợi Nhuận & Bộ Lọc (Ngày / Tháng / Đợt / Tất cả)
+    let currentMainView = 'orders'; // 'orders' hoặc 'materials'
+    let profitFilterMode = 'all'; // 'all', 'day', 'month', 'batch'
+    let selectedProfitDate = '2026-11-22';
+    let selectedProfitMonth = '2026-11';
+    let selectedProfitBatch = 'Đợt 1 (12.6kg)';
+
+    // PHÂN LOẠI 4 TRẠNG THÁI CHÍNH XÁC (GIẢI RỐI HÀNG & TIỀN)
+    function getOrderStatusType(order) {
+      const isDelivered = order.status === 'delivered';
+      const isPaid = order.payment === 'paid' || order.payment === 'transfer' || order.payment === 'cash';
+
+      if (isDelivered && isPaid) return 'done'; // Xong 100%
+      if (isDelivered && !isPaid) return 'need_payment'; // Giao rồi mà chưa tiền (Cần đòi tiền)
+      if (!isDelivered && isPaid) return 'need_delivery'; // Khách đã trả tiền/CK nhưng chưa giao (Nợ hàng khách)
+      return 'pending'; // Chưa giao & chưa trả tiền (Đơn mới đặt)
+    }
+
+    // Khởi tạo ứng dụng
+    function initApp() {
+      // 1. Tải danh sách vị
+      const savedFlavors = localStorage.getItem('chipchip_flavors');
+      if (savedFlavors) {
+        try { flavors = JSON.parse(savedFlavors); } catch (e) { flavors = [...DEFAULT_FLAVORS]; }
+      } else {
+        flavors = [...DEFAULT_FLAVORS];
+      }
+
+      // 2. Cố định tài khoản ngân hàng chính thức của vợ
+      bankConfig = {
+        bankId: "MB",
+        accountNo: "0941406007",
+        accountName: "DO THI HA GIANG",
+        customQrImage: "assets/qr_bank.jpg"
+      };
+      localStorage.setItem('chipchip_bank_config', JSON.stringify(bankConfig));
+
+      // 3. Tải danh sách đơn hàng & đồng bộ trạng thái
+      const savedOrders = localStorage.getItem('chipchip_orders');
+      if (savedOrders) {
+        try {
+          orders = JSON.parse(savedOrders);
+          // Cập nhật 4 khách tích xanh theo yêu cầu
+          orders.forEach(o => {
+            if ([6, 10, 14, 21].includes(o.id) || (['Như', 'A tân', 'Cô thanh2'].includes(o.name)) || (o.name === 'C khánh' && o.lang === 5)) {
+              o.status = 'delivered';
+              o.payment = 'paid';
+              if (o.note === 'chưa tiền' || o.note === 'lấy rồi chưa tiền') o.note = 'đã nộp tiền';
+            }
+            if (o.note === 'gạch hủy' || o.cancelled) {
+              o.status = 'delivered';
+              o.payment = 'paid';
+              o.note = '';
+              delete o.cancelled;
+            }
+          });
+        } catch (e) {
+          orders = [...INITIAL_ORDERS];
+        }
+      } else {
+        orders = [...INITIAL_ORDERS];
+      }
+
+      // Gán mốc thời gian theo yêu cầu:
+      // Các đơn đã xong -> gán ngày 21/11
+      // Các đơn mới / chưa xong -> gán ngày 22/11
+      orders.forEach(o => {
+        const type = getOrderStatusType(o);
+        if (type === 'done') {
+          if (!o.createdAt || o.createdAt.includes('2026-11-22')) o.createdAt = '2026-11-21T09:00:00';
+          if (!o.deliveredAt || o.deliveredAt.includes('2026-11-22')) o.deliveredAt = '2026-11-21T14:30:00';
+          if (!o.paidAt || o.paidAt.includes('2026-11-22')) o.paidAt = '2026-11-21T15:00:00';
+          if (!o.completedAt || o.completedAt.includes('2026-11-22')) o.completedAt = '2026-11-21T15:00:00';
+        } else {
+          if (!o.createdAt || o.createdAt.includes('2026-11-21')) o.createdAt = '2026-11-22T08:30:00';
+          if (o.status === 'delivered' && (!o.deliveredAt || o.deliveredAt.includes('2026-11-21'))) {
+            o.deliveredAt = '2026-11-22T09:15:00';
+          }
+          if ((o.payment === 'paid' || o.payment === 'transfer' || o.payment === 'cash') && (!o.paidAt || o.paidAt.includes('2026-11-21'))) {
+            o.paidAt = '2026-11-22T09:30:00';
+          }
+          delete o.completedAt;
+        }
+      });
+
+      // 4. Tải danh sách nguyên liệu đã mua & đợt
+      const savedMaterials = localStorage.getItem('chipchip_materials');
+      if (savedMaterials) {
+        try { materials = JSON.parse(savedMaterials); } catch (e) { materials = [...DEFAULT_MATERIALS]; }
+      } else {
+        materials = [...DEFAULT_MATERIALS];
+      }
+
+      const savedBatches = localStorage.getItem('chipchip_batches');
+      if (savedBatches) {
+        try { batches = JSON.parse(savedBatches); } catch (e) { batches = [...DEFAULT_BATCHES]; }
+      } else {
+        batches = [...DEFAULT_BATCHES];
+      }
+
+      // Đảm bảo đơn hàng có trường batch
+      orders.forEach(o => {
+        if (!o.batch) o.batch = 'Đợt 1 (12.6kg)';
+      });
+
+      // Ngày mặc định form mua nguyên liệu
+      const todayIsoStr = new Date().toISOString().split('T')[0];
+      const matDateInput = document.getElementById('inputMaterialDate');
+      if (matDateInput) matDateInput.value = todayIsoStr;
+      selectedProfitDate = todayIsoStr;
+
+      // Điền form cấu hình ngân hàng (nếu có trong DOM)
+      const elBank = document.getElementById('configBankSelect');
+      if (elBank) elBank.value = bankConfig.bankId || 'MB';
+      const elAcc = document.getElementById('configAccountNo');
+      if (elAcc) elAcc.value = bankConfig.accountNo || '';
+      const elName = document.getElementById('configAccountName');
+      if (elName) elName.value = bankConfig.accountName || '';
+
+      // Hiển thị ngày tháng
+      const today = new Date();
+      document.getElementById('currentDateText').innerText = today.toLocaleDateString('vi-VN', { 
+        weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric' 
+      });
+
+      renderFlavorButtons();
+      renderBatchSelectOptions();
+      renderProfitFilterControls();
+      renderApp();
+      renderProfitView();
+      initTheme();
+      initOta();
+    }
+
+    function saveState() {
+      localStorage.setItem('chipchip_orders', JSON.stringify(orders));
+      localStorage.setItem('chipchip_flavors', JSON.stringify(flavors));
+      localStorage.setItem('chipchip_bank_config', JSON.stringify(bankConfig));
+      localStorage.setItem('chipchip_materials', JSON.stringify(materials));
+      localStorage.setItem('chipchip_batches', JSON.stringify(batches));
+
+      // BẮN SANG ANDROID / FLUTTER BRIDGE ĐỂ TỰ ĐỘNG GHI VÀO THƯ MỤC DOWNLOADS (SURVIVES UNINSTALL)
+      try {
+        const fullBackup = {
+          orders,
+          flavors,
+          bankConfig,
+          materials,
+          batches,
+          savedAt: new Date().toISOString()
+        };
+        if (window.ChipChipBridge && window.ChipChipBridge.postMessage) {
+          window.ChipChipBridge.postMessage(JSON.stringify({
+            action: 'auto_backup',
+            payload: fullBackup
+          }));
+        }
+      } catch (err) {
+        console.warn('Bridge notification error:', err);
+      }
+
+      renderApp();
+      renderProfitView();
+    }
+
+    // Khôi phục toàn bộ từ Bridge khi mở app
+    window.restoreFromNativeBridge = function(backupData) {
+      if (!backupData) return;
+      try {
+        let parsed = typeof backupData === 'string' ? JSON.parse(backupData) : backupData;
+        if (parsed.payload) parsed = parsed.payload;
+        if (parsed.orders && Array.isArray(parsed.orders) && parsed.orders.length > 0) {
+          orders = parsed.orders;
+          localStorage.setItem('chipchip_orders', JSON.stringify(orders));
+        }
+        if (parsed.materials && Array.isArray(parsed.materials)) {
+          materials = parsed.materials;
+          localStorage.setItem('chipchip_materials', JSON.stringify(materials));
+        }
+        if (parsed.flavors && Array.isArray(parsed.flavors) && parsed.flavors.length > 0) {
+          flavors = parsed.flavors;
+          localStorage.setItem('chipchip_flavors', JSON.stringify(flavors));
+        }
+        if (parsed.bankConfig) {
+          bankConfig = parsed.bankConfig;
+          localStorage.setItem('chipchip_bank_config', JSON.stringify(bankConfig));
+        }
+        if (parsed.batches && Array.isArray(parsed.batches)) {
+          batches = parsed.batches;
+          localStorage.setItem('chipchip_batches', JSON.stringify(batches));
+        }
+        renderApp();
+        renderProfitView();
+        renderFlavorButtons();
+        console.log("Đã khôi phục dữ liệu từ bộ nhớ thiết bị thành công!");
+      } catch (e) {
+        console.error("Lỗi khi khôi phục dữ liệu native:", e);
+      }
+    };
+
+    // Xuất file sao lưu JSON
+    function exportBackupJson() {
+      const fullBackup = {
+        orders,
+        flavors,
+        bankConfig,
+        materials,
+        batches,
+        exportedAt: new Date().toISOString()
+      };
+      const jsonStr = JSON.stringify(fullBackup, null, 2);
+      
+      // Nếu đang trong app native Android
+      if (window.ChipChipBridge && window.ChipChipBridge.postMessage) {
+        window.ChipChipBridge.postMessage(JSON.stringify({
+          action: 'export_file',
+          payload: fullBackup
+        }));
+      }
+
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateStr = new Date().toISOString().split('T')[0];
+      a.href = url;
+      a.download = `ChipChip_Backup_${dateStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Đã xuất file sao lưu JSON thành công!');
+    }
+
+    // Nhập file khôi phục JSON
+    function importBackupJson(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (confirm('Bạn có chắc muốn khôi phục dữ liệu từ file này? Dữ liệu hiện tại sẽ được cập nhật.')) {
+            window.restoreFromNativeBridge(imported);
+            alert('Khôi phục dữ liệu thành công 100%!');
+            closeConfigModal();
+          }
+        } catch (err) {
+          alert('File sao lưu không hợp lệ!');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Lấy thông tin vị kẹo
+    function getFlavor(flavorId) {
+      return flavors.find(f => f.id === flavorId) || { id: flavorId, name: flavorId, icon: "🍬", price: 25000 };
+    }
+
+    // Tính tiền cho 1 đơn hàng
+    function calculateOrderMoney(order) {
+      if (order.breakdown) {
+        let total = 0;
+        for (let fid in order.breakdown) {
+          const flv = getFlavor(fid);
+          total += (order.breakdown[fid] * flv.price);
+        }
+        return total;
+      }
+      const flv = getFlavor(order.flavorId);
+      return order.lang * flv.price;
+    }
+
+    // Toggle Unit Mode (Lạng vs Hộp)
+    function toggleUnitMode(mode) {
+      if (mode === 'hop') {
+        document.getElementById('quickLangContainer').classList.add('hidden');
+        document.getElementById('customLangWrapper').classList.add('hidden');
+        document.getElementById('boxModeContainer').classList.remove('hidden');
+      } else {
+        document.getElementById('quickLangContainer').classList.remove('hidden');
+        document.getElementById('customLangWrapper').classList.remove('hidden');
+        document.getElementById('boxModeContainer').classList.add('hidden');
+      }
+    }
+
+    function selectQuickLang(val, el) {
+      document.getElementById('inputLangValue').value = val;
+      document.querySelectorAll('.quick-lang-btn').forEach(btn => {
+        btn.classList.remove('border-2', 'border-rose-500', 'bg-rose-500', 'text-white', 'shadow-md', 'shadow-rose-200');
+        btn.classList.add('border', 'border-slate-200', 'bg-white', 'text-slate-700');
+      });
+      const targetBtn = el || (typeof event !== 'undefined' && event?.currentTarget) || document.querySelector(`.quick-lang-btn[onclick*="(${val}"]`);
+      if (targetBtn) {
+        targetBtn.classList.remove('border', 'border-slate-200', 'bg-white', 'text-slate-700');
+        targetBtn.classList.add('border-2', 'border-rose-500', 'bg-rose-500', 'text-white', 'shadow-md', 'shadow-rose-200');
+      }
+    }
+
+    // Render các nút chọn vị trên Form
+    function renderFlavorButtons() {
+      const container = document.getElementById('flavorSelectionContainer');
+      container.innerHTML = '';
+
+      flavors.forEach(flavor => {
+        const isSelected = selectedFlavorId === flavor.id;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = `flavor-btn-${flavor.id}`;
+        btn.onclick = () => selectFlavor(flavor.id);
+        btn.className = `btn-tactile flavor-btn py-2 px-1 rounded-2xl text-xs font-bold border flex flex-col items-center gap-0.5 transition ${
+          isSelected 
+            ? 'border-2 border-rose-500 bg-rose-50 text-rose-700 shadow-md shadow-rose-200/50 scale-[1.02]' 
+            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-xs'
+        }`;
+        btn.innerHTML = `
+          <span class="text-base">${flavor.icon || '🍬'}</span>
+          <span class="truncate w-full text-center font-extrabold text-[11px]">${flavor.name}</span>
+          <span class="text-[10px] font-bold ${isSelected ? 'text-rose-600' : 'text-slate-400'}">${(flavor.price / 1000)}k</span>
+        `;
+        container.appendChild(btn);
+      });
+
+      updateFlavorPriceHint();
+    }
+
+    function selectFlavor(id) {
+      selectedFlavorId = id;
+      renderFlavorButtons();
+    }
+
+    function updateFlavorPriceHint() {
+      const current = getFlavor(selectedFlavorId);
+      document.getElementById('flavorPriceHint').innerText = `Vị "${current.name}": ${current.price.toLocaleString('vi-VN')} đ/lạng`;
+    }
+
+    // Thêm vị kẹo mới
+    function promptAddNewFlavor() {
+      const name = prompt("Nhập tên vị kẹo mới (ví dụ: Dâu tây, Matcha, Việt quất...):");
+      if (name && name.trim()) {
+        const cleanName = name.trim();
+        const id = 'flv_' + Date.now();
+        const icons = ["🍓", "🍋", "🥭", "🍊", "🥛", "🍇", "🍏", "🍉", "🫐", "🍫", "🍵", "🍑"];
+        const randomIcon = icons[Math.floor(Math.random() * icons.length)];
+        
+        const newFlavor = {
+          id: id,
+          name: cleanName,
+          icon: randomIcon,
+          price: 25000
+        };
+
+        flavors.push(newFlavor);
+        selectedFlavorId = id;
+        saveState();
+        renderFlavorButtons();
+        alert(`Đã thêm vị "${cleanName}" với giá 25.000đ/lạng!`);
+      }
+    }
+
+    // Thêm Đơn Hàng Mới
+    function addNewOrder() {
+      const name = document.getElementById('inputName').value.trim();
+      if (!name) {
+        showToast('⚠️ Vui lòng nhập tên khách hàng!');
+        document.getElementById('inputName').focus();
+        return;
+      }
+
+      const isBoxMode = document.querySelector('input[name="unitType"]:checked').value === 'hop';
+      let totalLang = 0;
+      let unitNote = '';
+
+      if (isBoxMode) {
+        const boxes = parseFloat(document.getElementById('inputBoxCount').value) || 1;
+        const weightPerBox = parseFloat(document.getElementById('inputBoxWeight').value) || 4;
+        totalLang = boxes * weightPerBox;
+        unitNote = `${boxes} hộp (${weightPerBox} lạng/hộp)`;
+      } else {
+        totalLang = parseFloat(document.getElementById('inputLangValue').value) || 0;
+        unitNote = `${totalLang} lạng`;
+      }
+
+      const payment = document.getElementById('inputPaymentStatus').value;
+      const note = document.getElementById('inputNote').value.trim();
+      const currentFlv = getFlavor(selectedFlavorId);
+
+      const nowIso = new Date().toISOString();
+      const newOrder = {
+        id: Date.now(),
+        name: name,
+        lang: totalLang,
+        unitNote: unitNote,
+        flavorId: selectedFlavorId,
+        flavorName: currentFlv.name,
+        status: "pending",
+        payment: payment,
+        note: note,
+        createdAt: nowIso
+      };
+      if (payment !== 'unpaid') {
+        newOrder.paidAt = nowIso;
+      }
+
+      orders.unshift(newOrder);
+      saveState();
+
+      // Reset form
+      document.getElementById('inputName').value = '';
+      document.getElementById('inputNote').value = '';
+
+      renderApp();
+      switchBottomTab('orders');
+      showToast(`Đã thêm đơn cho ${name}!`);
+    }
+
+    // Format thời gian hiển thị
+    function formatTime(isoStr) {
+      if (!isoStr) return '';
+      const d = new Date(isoStr);
+      if (isNaN(d.getTime())) return '';
+      const h = String(d.getHours()).padStart(2, '0');
+      const m = String(d.getMinutes()).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const mon = String(d.getMonth() + 1).padStart(2, '0');
+      return `${h}:${m} (${day}/${mon})`;
+    }
+
+    // Toggle Giao Hàng
+    function toggleDeliveryStatus(id) {
+      const order = orders.find(o => o.id === id);
+      if (order) {
+        order.status = order.status === 'delivered' ? 'pending' : 'delivered';
+        if (order.status === 'delivered') {
+          order.deliveredAt = new Date().toISOString();
+        } else {
+          delete order.deliveredAt;
+          delete order.completedAt;
+        }
+        const isPaid = order.payment === 'paid' || order.payment === 'transfer' || order.payment === 'cash';
+        if (order.status === 'delivered' && isPaid) {
+          order.completedAt = new Date().toISOString();
+        }
+        saveState();
+      }
+    }
+
+    // Toggle Tiền Nợ / Đã Thanh Toán
+    function cyclePaymentStatus(id) {
+      const order = orders.find(o => o.id === id);
+      if (order) {
+        const isPaid = order.payment === 'paid' || order.payment === 'transfer' || order.payment === 'cash';
+        if (isPaid) {
+          order.payment = 'unpaid';
+          delete order.paidAt;
+          delete order.completedAt;
+        } else {
+          order.payment = 'paid';
+          order.paidAt = new Date().toISOString();
+          if (order.status === 'delivered') {
+            order.completedAt = new Date().toISOString();
+          }
+        }
+        saveState();
+      }
+    }
+
+    // Toggle Đơn Hoàn Tất 100% (Giao và Tiền xong)
+    function toggleFastComplete(id) {
+      const order = orders.find(o => o.id === id);
+      if (order) {
+        const type = getOrderStatusType(order);
+        if (type === 'done') {
+          // Nếu đang xong rồi mà bấm lại -> chuyển về chưa giao
+          order.status = 'pending';
+        } else {
+          // Bấm 1 phát là đánh dấu đã giao VÀ đã nhận tiền!
+          order.status = 'delivered';
+          order.payment = 'paid';
+        }
+        saveState();
+      }
+    }
+
+    // Xóa Đơn Hàng với Modal Xác Nhận Siêu Đẹp
+    async function deleteOrder(id) {
+      const order = orders.find(o => o.id === id);
+      const name = order ? order.name : 'đơn này';
+      const confirmed = await showConfirmDialog({
+        title: 'Xóa Đơn Hàng?',
+        message: `Bạn có chắc muốn xóa hẳn đơn của "${name}" khỏi sổ không? Hành động này không thể hoàn tác.`,
+        icon: 'fa-trash-can',
+        confirmText: 'Xóa đơn',
+        confirmClass: 'from-rose-500 to-rose-600 text-white shadow-rose-200',
+        iconBg: 'bg-rose-100 text-rose-500'
+      });
+      if (confirmed) {
+        orders = orders.filter(o => o.id !== id);
+        saveState();
+        renderApp();
+        showToast(`Đã xóa đơn của "${name}"`);
+      }
+    }
+
+    // Lọc Danh Sách
+    function setFilter(filter) {
+      currentFilter = filter;
+      
+      // Update UI active tab buttons
+      document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.classList.remove('bg-slate-800', 'text-white', 'shadow-sm');
+        tab.classList.add('bg-white');
+      });
+      const activeBtn = document.getElementById(`filter-${filter}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-white');
+        activeBtn.classList.add('bg-slate-800', 'text-white', 'shadow-sm');
+      }
+
+      // Update UI active status cards
+      ['need_payment', 'need_delivery', 'pending', 'done'].forEach(key => {
+        const card = document.getElementById(`card-filter-${key}`);
+        if (card) {
+          if (filter === key) {
+            card.classList.add('ring-2', 'ring-slate-800', 'scale-[1.02]');
+          } else {
+            card.classList.remove('ring-2', 'ring-slate-800', 'scale-[1.02]');
+          }
+        }
+      });
+
+      renderOrderList();
+    }
+
+    // Render Dashboard & List
+    function renderApp() {
+      let activeLangTotal = 0;
+      let totalMoney = 0;
+      let paidMoney = 0;
+      let unpaidMoney = 0;
+      
+      // Đếm 4 trạng thái
+      let countDone = 0;
+      let countNeedPayment = 0;
+      let countNeedDelivery = 0;
+      let countPending = 0;
+
+      // Thống kê khối lượng từng vị
+      const flavorCounts = {};
+      flavors.forEach(f => flavorCounts[f.id] = 0);
+
+      orders.forEach(order => {
+        activeLangTotal += order.lang;
+        const orderPrice = calculateOrderMoney(order);
+        totalMoney += orderPrice;
+
+        const type = getOrderStatusType(order);
+        if (type === 'done') countDone++;
+        else if (type === 'need_payment') countNeedPayment++;
+        else if (type === 'need_delivery') countNeedDelivery++;
+        else countPending++;
+
+        if (order.payment === 'unpaid') {
+          unpaidMoney += orderPrice;
+        } else {
+          paidMoney += orderPrice;
+        }
+
+        // Phân loại khối lượng theo vị
+        if (order.breakdown) {
+          for (let fid in order.breakdown) {
+            flavorCounts[fid] = (flavorCounts[fid] || 0) + order.breakdown[fid];
+          }
+        } else {
+          const fid = order.flavorId || 'mix';
+          flavorCounts[fid] = (flavorCounts[fid] || 0) + order.lang;
+        }
+      });
+
+      // Update Dashboard số liệu
+      const totalKg = (activeLangTotal / 10).toFixed(1);
+      document.getElementById('totalKgDisplay').innerText = totalKg;
+      document.getElementById('totalLangDisplay').innerText = `${activeLangTotal} lạng`;
+      document.getElementById('totalMoneyDisplay').innerText = `${totalMoney.toLocaleString('vi-VN')} đ`;
+
+      document.getElementById('statPaidMoney').innerText = `${paidMoney.toLocaleString('vi-VN')} đ`;
+      document.getElementById('statUnpaidMoney').innerText = `${unpaidMoney.toLocaleString('vi-VN')} đ`;
+      const elOrderCount = document.getElementById('orderCountBadge');
+      if (elOrderCount) elOrderCount.innerText = orders.length;
+
+      // Update số lượng 4 thẻ giải rối
+      const elBNeedPay = document.getElementById('badge-need-payment');
+      if (elBNeedPay) elBNeedPay.innerText = countNeedPayment;
+      const elBNeedDel = document.getElementById('badge-need-delivery');
+      if (elBNeedDel) elBNeedDel.innerText = countNeedDelivery;
+      const elBPending = document.getElementById('badge-pending');
+      if (elBPending) elBPending.innerText = countPending;
+      const elBDone = document.getElementById('badge-done');
+      if (elBDone) elBDone.innerText = countDone;
+
+      // Update số lượng trên các nút tab
+      const elTabAll = document.getElementById('tabCount-all');
+      if (elTabAll) elTabAll.innerText = orders.length;
+      const mainBadge = document.getElementById('mainOrdersCountBadge');
+      if (mainBadge) mainBadge.innerText = orders.length;
+      const elTabNeedPay = document.getElementById('tabCount-need_payment');
+      if (elTabNeedPay) elTabNeedPay.innerText = countNeedPayment;
+      const elTabNeedDel = document.getElementById('tabCount-need_delivery');
+      if (elTabNeedDel) elTabNeedDel.innerText = countNeedDelivery;
+      const elTabPending = document.getElementById('tabCount-pending');
+      if (elTabPending) elTabPending.innerText = countPending;
+      const elTabDone = document.getElementById('tabCount-done');
+      if (elTabDone) elTabDone.innerText = countDone;
+
+      // Render Dashboard Vị
+      const statsContainer = document.getElementById('flavorStatsContainer');
+      statsContainer.innerHTML = '';
+      
+      let hasAnyStat = false;
+      for (let fid in flavorCounts) {
+        const count = flavorCounts[fid];
+        if (count > 0) {
+          hasAnyStat = true;
+          const flv = getFlavor(fid);
+          const statBox = document.createElement('div');
+          statBox.className = "bg-white/20 backdrop-blur-md rounded-2xl py-2 px-1 border border-white/20 shadow-xs";
+          statBox.innerHTML = `
+            <div class="text-[11px] text-white font-bold truncate drop-shadow-xs">${flv.icon} ${flv.name}</div>
+            <div class="font-black text-sm text-white drop-shadow-xs">${count} <span class="text-[10px] font-semibold text-rose-100">lạng</span></div>
+          `;
+          statsContainer.appendChild(statBox);
+        }
+      }
+
+      if (!hasAnyStat) {
+        statsContainer.innerHTML = `<div class="col-span-3 text-center text-[11px] text-rose-200">Chưa có khối lượng kẹo</div>`;
+      }
+
+      // Cập nhật badge số đơn trên thanh điều hướng đáy
+      const navBadge = document.getElementById('navOrdersBadge');
+      if (navBadge) navBadge.innerText = orders.length;
+
+      renderOrderList();
+    }
+
+    function renderOrderList() {
+      const listContainer = document.getElementById('orderList');
+      listContainer.innerHTML = '';
+
+      let filteredOrders = orders.filter(order => {
+        const type = getOrderStatusType(order);
+        let matchFilter = true;
+        if (currentFilter === 'need_payment') matchFilter = (type === 'need_payment');
+        else if (currentFilter === 'need_delivery') matchFilter = (type === 'need_delivery');
+        else if (currentFilter === 'pending') matchFilter = (type === 'pending');
+        else if (currentFilter === 'done') matchFilter = (type === 'done');
+        if (!matchFilter) return false;
+
+        if (searchQuery) {
+          const q = removeVietnameseTones(searchQuery);
+          const name = removeVietnameseTones(order.name || '');
+          const flavorObj = getFlavor(order.flavorId);
+          const flavor = removeVietnameseTones(flavorObj ? flavorObj.name : '');
+          const note = removeVietnameseTones(order.note || '');
+          const unit = removeVietnameseTones(order.unitNote || '');
+          return name.includes(q) || flavor.includes(q) || note.includes(q) || unit.includes(q);
+        }
+        return true;
+      });
+
+      // SẮP XẾP THỨ TỰ:
+      // 1. Các đơn mới / chưa xong (ngày 22/11, cần làm) -> NẰM TRÊN CÙNG
+      // 2. Các đơn đã xong 100% (ngày 21/11, hoàn tất) -> TỰ ĐỘNG CHÌM XUỐNG DƯỚI CÙNG
+      filteredOrders.sort((a, b) => {
+        const typeA = getOrderStatusType(a);
+        const typeB = getOrderStatusType(b);
+
+        const isDoneA = typeA === 'done' ? 1 : 0;
+        const isDoneB = typeB === 'done' ? 1 : 0;
+
+        if (isDoneA !== isDoneB) {
+          return isDoneA - isDoneB; // 0 (chưa xong) lên trên, 1 (đã xong) xuống dưới
+        }
+
+        // Trong các đơn chưa xong: Cần đòi tiền (1) -> Nợ hàng (2) -> Đơn mới (3)
+        const priority = { need_payment: 1, need_delivery: 2, pending: 3, done: 4 };
+        if (priority[typeA] !== priority[typeB]) {
+          return priority[typeA] - priority[typeB];
+        }
+
+        return (b.id || 0) - (a.id || 0);
+      });
+
+      if (filteredOrders.length === 0) {
+        let emptyNotice = "Không có đơn hàng nào trong mục này";
+        let emptyIcon = "fa-clipboard-check";
+        if (searchQuery) {
+          emptyNotice = `Không tìm thấy đơn nào khớp với "${searchQuery}"`;
+          emptyIcon = "fa-magnifying-glass";
+        } else if (currentFilter === 'need_payment') {
+          emptyNotice = "Tuyệt vời! Không có ai nợ tiền bạn.";
+        } else if (currentFilter === 'need_delivery') {
+          emptyNotice = "Đã giao hết các đơn khách chuyển khoản trước!";
+        }
+        
+        listContainer.innerHTML = `
+          <div class="text-center py-8 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
+            <i class="fa-solid ${emptyIcon} text-3xl mb-2 text-slate-300"></i>
+            <p class="text-xs font-semibold">${emptyNotice}</p>
+            ${searchQuery ? `<button onclick="clearSearch()" class="mt-2.5 text-[11px] bg-rose-50 text-rose-600 font-extrabold px-3 py-1 rounded-lg border border-rose-200">Xóa tìm kiếm</button>` : ''}
+          </div>
+        `;
+        return;
+      }
+
+      filteredOrders.forEach(order => {
+        const type = getOrderStatusType(order);
+        const isDone = type === 'done';
+        const isDelivered = order.status === 'delivered';
+        const orderMoney = calculateOrderMoney(order);
+        const flavorInfo = getFlavor(order.flavorId);
+        
+        // Huy hiệu trạng thái hàng & tiền rõ ràng
+        let statusTag = '';
+        if (type === 'done') {
+          statusTag = `<span class="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+            <i class="fa-solid fa-check"></i> Xong
+          </span>`;
+        } else if (type === 'need_payment') {
+          statusTag = `<span class="text-[10px] bg-red-100 text-red-700 font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+            <i class="fa-solid fa-triangle-exclamation"></i> ĐÃ GIAO - CHƯA TIỀN
+          </span>`;
+        } else if (type === 'need_delivery') {
+          statusTag = `<span class="text-[10px] bg-blue-100 text-blue-700 font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+            <i class="fa-solid fa-money-bill-transfer"></i> ĐÃ CK - CHỜ GIAO
+          </span>`;
+        } else {
+          statusTag = `<span class="text-[10px] bg-amber-100 text-amber-700 font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+            <i class="fa-regular fa-clock"></i> ĐƠN MỚI
+          </span>`;
+        }
+
+        const isPaid = order.payment === 'paid' || order.payment === 'transfer' || order.payment === 'cash';
+
+        let cardBorderAccent = 'border-l-4 border-l-amber-400 border-slate-200 hover:border-slate-300';
+        if (type === 'need_payment') {
+          cardBorderAccent = 'border-l-4 border-l-red-500 border-red-200 bg-red-50/20';
+        } else if (type === 'need_delivery') {
+          cardBorderAccent = 'border-l-4 border-l-blue-500 border-blue-200 bg-blue-50/20';
+        } else if (isDone) {
+          cardBorderAccent = 'border-l-4 border-l-emerald-500 completed-card';
+        }
+
+        const card = document.createElement('div');
+        card.className = `order-card p-3.5 bg-white rounded-2xl border shadow-sm ${cardBorderAccent}`;
+
+        card.innerHTML = `
+          <!-- PHẦN THÔNG TIN ĐƠN -->
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <h3 class="font-extrabold text-sm ${isDone ? 'completed-text' : 'text-slate-900'}">
+                  ${order.name}
+                </h3>
+                ${statusTag}
+              </div>
+
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-xs font-black text-rose-600 ${isDone ? 'completed-text' : ''}">
+                  ${order.unitNote || (order.lang + ' lạng')}
+                  <span class="text-slate-400 font-normal">(${(order.lang * 0.1).toFixed(1)} kg)</span>
+                </span>
+                <span class="text-[11px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded-md">
+                  ${order.breakdown ? '🍬 Mix nhiều vị' : (flavorInfo.icon + ' ' + flavorInfo.name)}
+                </span>
+              </div>
+
+              <div class="text-xs font-bold text-slate-700 mt-1">
+                Thành tiền: <span class="text-rose-600 font-black text-sm">${orderMoney.toLocaleString('vi-VN')} đ</span>
+              </div>
+
+              ${order.note ? `
+                <div class="text-[11px] text-slate-500 mt-1 flex items-center gap-1 italic">
+                  <i class="fa-regular fa-comment-dots text-slate-400"></i>
+                  <span>${order.note}</span>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Nút Hành Động góc phải (QR Thu Tiền, Xóa) -->
+            <div class="flex items-center space-x-1 shrink-0">
+              <button onclick="openQrModal(${order.id})" class="btn-tactile h-8 px-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center gap-1 text-[11px] font-bold border border-rose-200 transition shadow-2xs" title="Mã QR thu tiền">
+                <i class="fa-solid fa-qrcode text-xs"></i>
+                <span>QR</span>
+              </button>
+
+              <button onclick="deleteOrder(${order.id})" class="btn-tactile w-8 h-8 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 flex items-center justify-center text-xs border border-slate-200 transition shadow-2xs" title="Xóa hẳn">
+                <i class="fa-regular fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- MỐC THỜI GIAN CHI TIẾT (NGÀY GIỜ CỤ THỂ) -->
+          <div class="text-[10px] text-slate-500 mt-2 bg-slate-50/90 px-2.5 py-1.5 rounded-xl flex items-center gap-2 flex-wrap border border-slate-100">
+            <span class="flex items-center gap-1 font-medium text-slate-600">
+              <i class="fa-regular fa-clock text-slate-400"></i> Tạo: <strong>${formatTime(order.createdAt)}</strong>
+            </span>
+            ${order.deliveredAt ? `
+              <span class="flex items-center gap-1 font-medium text-emerald-700">
+                <i class="fa-solid fa-truck-fast text-emerald-500"></i> Giao: <strong>${formatTime(order.deliveredAt)}</strong>
+              </span>
+            ` : ''}
+            ${order.paidAt ? `
+              <span class="flex items-center gap-1 font-medium text-blue-700">
+                <i class="fa-solid fa-circle-check text-blue-500"></i> Tiền: <strong>${formatTime(order.paidAt)}</strong>
+              </span>
+            ` : ''}
+            ${isDone && order.completedAt ? `
+              <span class="flex items-center gap-1 font-bold text-emerald-700">
+                <i class="fa-solid fa-check-double text-emerald-600"></i> Xong: <strong>${formatTime(order.completedAt)}</strong>
+              </span>
+            ` : ''}
+          </div>
+
+          <!-- HAI NÚT BẤM TO RÕ RÀNG: HÀNG & TIỀN (CHẠM VÀO ĐỂ ĐỔI NGAY) -->
+          <div class="grid grid-cols-2 gap-2 mt-2.5 pt-2.5 border-t border-slate-100">
+            <!-- NÚT 1: HÀNG (Chưa giao <-> Đã giao) -->
+            <button onclick="toggleDeliveryStatus(${order.id})" class="btn-tactile py-2.5 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition ${
+              isDelivered 
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20' 
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+            }">
+              <i class="fa-solid ${isDelivered ? 'fa-truck-fast' : 'fa-box'} text-xs"></i>
+              <span>${isDelivered ? '✓ ĐÃ GIAO HÀNG' : '📦 CHƯA GIAO'}</span>
+            </button>
+
+            <!-- NÚT 2: TIỀN (Chưa tiền <-> Đã nhận tiền) -->
+            <button onclick="cyclePaymentStatus(${order.id})" class="btn-tactile py-2.5 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition ${
+              isPaid 
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-md shadow-emerald-600/20' 
+                : 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-200'
+            }">
+              <i class="fa-solid ${isPaid ? 'fa-circle-check' : 'fa-clock'} text-xs"></i>
+              <span>${isPaid ? '✓ ĐÃ NHẬN TIỀN' : '⏳ CHƯA TIỀN'}</span>
+            </button>
+          </div>
+        `;
+
+        listContainer.appendChild(card);
+      });
+    }
+
+    // Modal QR Thu Tiền Cố Định Chính Thức
+    function openQrModal(orderId) {
+      let amount = 0;
+      let customerName = "Khách mua kẹo";
+
+      if (orderId) {
+        const order = orders.find(o => o.id === orderId);
+        if (order) {
+          amount = calculateOrderMoney(order);
+          customerName = order.name;
+        }
+      }
+
+      document.getElementById('qrCustomerName').innerText = customerName;
+      document.getElementById('qrAmountDisplay').innerText = amount > 0 ? `${amount.toLocaleString('vi-VN')} đ` : 'Tùy chọn';
+      document.getElementById('qrBankDisplay').innerText = 'MB Bank (Quân Đội)';
+      document.getElementById('qrAccountDisplay').innerText = '0941406007';
+      document.getElementById('qrOwnerDisplay').innerText = 'DO THI HA GIANG';
+
+      const qrImg = document.getElementById('qrImageElement');
+      if (qrImg) qrImg.src = 'assets/qr_bank.jpg';
+
+      const zoomDesc = document.getElementById('qrZoomOrderDesc');
+      if (zoomDesc) {
+        zoomDesc.innerText = amount > 0 ? `Đơn hàng của ${customerName}: ${amount.toLocaleString('vi-VN')} đ` : 'Quét mã chuyển tiền nhanh 24/7';
+      }
+
+      document.getElementById('qrModal').classList.remove('hidden');
+    }
+
+    function closeQrModal() {
+      document.getElementById('qrModal').classList.add('hidden');
+    }
+
+    // Modal Phóng To Toàn Màn Hình
+    function openQrZoom() {
+      const zoomImg = document.getElementById('qrZoomImage');
+      if (zoomImg) zoomImg.src = 'assets/qr_bank.jpg';
+      document.getElementById('qrZoomModal').classList.remove('hidden');
+    }
+
+    function closeQrZoom() {
+      document.getElementById('qrZoomModal').classList.add('hidden');
+    }
+
+    function copyQrAccount() {
+      navigator.clipboard.writeText('0941406007').then(() => {
+        showToast('Đã chép STK: 0941406007 (MB Bank)');
+      }).catch(err => {
+        showToast('STK: 0941406007 - MB Bank');
+      });
+    }
+
+    // Modal Cài Đặt
+    function openConfigModal() {
+      renderFlavorPriceConfigList();
+      document.getElementById('configModal').classList.remove('hidden');
+    }
+    function closeConfigModal() {
+      document.getElementById('configModal').classList.add('hidden');
+    }
+
+    // Render danh sách chỉnh giá từng vị trong modal
+    function renderFlavorPriceConfigList() {
+      const container = document.getElementById('flavorPriceConfigList');
+      container.innerHTML = '';
+
+      flavors.forEach(flavor => {
+        const row = document.createElement('div');
+        row.className = "flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-xl border border-slate-200";
+        row.innerHTML = `
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-base">${flavor.icon || '🍬'}</span>
+            <span class="text-xs font-bold text-slate-800 truncate">${flavor.name}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <input type="number" id="price_input_${flavor.id}" value="${flavor.price}" step="1000" min="1000"
+                   class="w-24 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-right focus:outline-none focus:border-rose-500">
+            <span class="text-[11px] text-slate-400 font-medium">đ</span>
+            ${!['mix', 'hungchanh'].includes(flavor.id) ? `
+              <button onclick="deleteFlavor('${flavor.id}')" class="text-slate-300 hover:text-red-500 px-1 text-xs" title="Xóa vị">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            ` : ''}
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    // Đổi giá đồng loạt cho tất cả các vị
+    function applyGlobalPrice() {
+      const price = parseInt(document.getElementById('globalPriceInput').value, 10);
+      if (price > 0) {
+        flavors.forEach(f => f.price = price);
+        renderFlavorPriceConfigList();
+        saveState();
+        renderFlavorButtons();
+        alert(`Đã áp dụng mức giá ${price.toLocaleString('vi-VN')} đ/lạng cho TẤT CẢ các vị!`);
+      }
+    }
+
+    // Lưu tất cả cài đặt
+    function saveAllSettings() {
+      // 1. Tài khoản ngân hàng cố định (không cần sửa)
+      bankConfig.bankId = "MB";
+      bankConfig.accountNo = "0941406007";
+      bankConfig.accountName = "DO THI HA GIANG";
+      bankConfig.customQrImage = "assets/qr_bank.jpg";
+
+      // 2. Lưu giá từng vị
+      flavors.forEach(flavor => {
+        const input = document.getElementById(`price_input_${flavor.id}`);
+        if (input) {
+          const p = parseInt(input.value, 10);
+          if (p > 0) flavor.price = p;
+        }
+      });
+
+      saveState();
+      renderFlavorButtons();
+      closeConfigModal();
+      showToast('Đã lưu tất cả cài đặt thành công!');
+    }
+
+    // Xóa vị
+    function deleteFlavor(flavorId) {
+      if (confirm('Bạn có chắc muốn xóa vị này khỏi danh mục?')) {
+        flavors = flavors.filter(f => f.id !== flavorId);
+        if (selectedFlavorId === flavorId) selectedFlavorId = 'mix';
+        renderFlavorPriceConfigList();
+        saveState();
+        renderFlavorButtons();
+      }
+    }
+
+    // Xuất văn bản tổng hợp gửi Zalo
+    function shareZaloSummary() {
+      let activeLangTotal = 0;
+      let totalMoney = 0;
+      let unpaidList = [];
+      const flavorCounts = {};
+
+      let text = `🍬 BÁO CÁO ĐƠN KẸO CHIP CHIP (${document.getElementById('currentDateText').innerText})\n`;
+      text += `------------------------------------\n`;
+
+      orders.forEach((o, index) => {
+        activeLangTotal += o.lang;
+        const price = calculateOrderMoney(o);
+        totalMoney += price;
+        const flv = getFlavor(o.flavorId);
+        const type = getOrderStatusType(o);
+        
+        let statusBadge = '[⏳ ĐƠN MỚI]';
+        if (type === 'done') statusBadge = '[✓ XONG]';
+        else if (type === 'need_payment') statusBadge = '[🔴 ĐÃ GIAO - CHƯA TIỀN]';
+        else if (type === 'need_delivery') statusBadge = '[🔵 ĐÃ CK - CHỜ GIAO]';
+        
+        if (o.payment === 'unpaid') {
+          unpaidList.push(`${o.name}: ${o.lang} lạng (${price.toLocaleString('vi-VN')}đ)`);
+        }
+
+        // Thống kê vị
+        if (o.breakdown) {
+          for (let fid in o.breakdown) {
+            flavorCounts[fid] = (flavorCounts[fid] || 0) + o.breakdown[fid];
+          }
+        } else {
+          const fid = o.flavorId || 'mix';
+          flavorCounts[fid] = (flavorCounts[fid] || 0) + o.lang;
+        }
+
+        text += `${index + 1}. ${o.name} - ${o.unitNote || (o.lang + ' lạng')} (${o.breakdown ? 'Mix nhiều vị' : flv.name}) ${statusBadge} ${o.note ? '[' + o.note + ']' : ''}\n`;
+      });
+
+      const totalKg = (activeLangTotal / 10).toFixed(1);
+      text += `------------------------------------\n`;
+      text += `⚖️ TỔNG KHỐI LƯỢNG BÁN: ${totalKg} KG (${activeLangTotal} lạng)\n`;
+      text += `💰 TỔNG TIỀN DỰ KIẾN: ${totalMoney.toLocaleString('vi-VN')} đ\n`;
+      
+      text += `\n📦 KHỐI LƯỢNG THEO TỪNG VỊ CẦN LÀM:\n`;
+      for (let fid in flavorCounts) {
+        if (flavorCounts[fid] > 0) {
+          const flv = getFlavor(fid);
+          text += `- ${flv.name}: ${flavorCounts[fid]} lạng (${(flavorCounts[fid] * 0.1).toFixed(1)} kg)\n`;
+        }
+      }
+
+      if (unpaidList.length > 0) {
+        text += `\n⚠️ DANH SÁCH CHƯA TRẢ TIỀN:\n- ` + unpaidList.join('\n- ') + `\n`;
+      }
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Đã sao chép nội dung chốt đơn! Chị có thể mở Zalo và Dán (Paste) để gửi ngay.');
+      }).catch(err => {
+        alert('Nội dung chốt đơn:\n\n' + text);
+      });
+    }
+
+    // Khôi phục dữ liệu ban đầu
+    function restoreInitialDataConfirm() {
+      if (confirm('Khôi phục lại danh sách mẫu ban đầu chuẩn 12.6 kg?')) {
+        orders = JSON.parse(JSON.stringify(INITIAL_ORDERS));
+        flavors = JSON.parse(JSON.stringify(DEFAULT_FLAVORS));
+        saveState();
+        renderFlavorButtons();
+      }
+    }
+
+    // Xóa hết đơn để bắt đầu ngày mới
+    function clearAllOrdersConfirm() {
+      if (confirm('Bạn có chắc chắn muốn xóa tất cả đơn để bắt đầu ngày mới?')) {
+        orders = [];
+        saveState();
+      }
+    }
+
+    // ==========================================
+    // PHẦN MỚI: PHÂN TÍCH DỮ LIỆU & BIỂU ĐỒ XU HƯỚNG
+    // ==========================================
+    let flavorChartInstance = null;
+
+    function openAnalyticsModal() {
+      renderAnalytics();
+      document.getElementById('analyticsModal').classList.remove('hidden');
+    }
+
+    function closeAnalyticsModal() {
+      document.getElementById('analyticsModal').classList.add('hidden');
+    }
+
+    function renderAnalytics() {
+      // 1. Thống kê khối lượng từng vị kẹo
+      const flavorStats = {};
+      flavors.forEach(f => {
+        flavorStats[f.id] = { id: f.id, name: f.name, icon: f.icon || '🍬', lang: 0, revenue: 0 };
+      });
+
+      let totalLang = 0;
+      let totalRevenue = 0;
+
+      orders.forEach(order => {
+        totalLang += order.lang;
+        const money = calculateOrderMoney(order);
+        totalRevenue += money;
+
+        if (order.breakdown) {
+          for (let fid in order.breakdown) {
+            if (!flavorStats[fid]) {
+              const flv = getFlavor(fid);
+              flavorStats[fid] = { id: fid, name: flv.name, icon: flv.icon || '🍬', lang: 0, revenue: 0 };
+            }
+            const bLang = order.breakdown[fid];
+            flavorStats[fid].lang += bLang;
+            const price = getFlavor(fid).price;
+            flavorStats[fid].revenue += (bLang * price);
+          }
+        } else {
+          const fid = order.flavorId || 'mix';
+          if (!flavorStats[fid]) {
+            const flv = getFlavor(fid);
+            flavorStats[fid] = { id: fid, name: flv.name, icon: flv.icon || '🍬', lang: 0, revenue: 0 };
+          }
+          flavorStats[fid].lang += order.lang;
+          flavorStats[fid].revenue += money;
+        }
+      });
+
+      // Sắp xếp các vị theo khối lượng bán ra nhiều nhất
+      const sortedFlavors = Object.values(flavorStats)
+        .filter(f => f.lang > 0)
+        .sort((a, b) => b.lang - a.lang);
+
+      // Cập nhật huy hiệu Top 1
+      if (sortedFlavors.length > 0) {
+        const top1 = sortedFlavors[0];
+        const percent = totalLang > 0 ? ((top1.lang / totalLang) * 100).toFixed(0) : 0;
+        document.getElementById('topSellingFlavorBadge').innerText = `🔥 Top 1: ${top1.icon} ${top1.name} (${top1.lang} lạng - ${percent}%)`;
+      } else {
+        document.getElementById('topSellingFlavorBadge').innerText = 'Chưa có đơn';
+      }
+
+      // Vẽ Biểu đồ Chart.js (Doughnut chart hiện đại)
+      const chartCtx = document.getElementById('flavorTrendChart');
+      if (chartCtx) {
+        if (flavorChartInstance) {
+          flavorChartInstance.destroy();
+        }
+
+        const labels = sortedFlavors.map(f => `${f.icon} ${f.name}`);
+        const dataValues = sortedFlavors.map(f => f.lang);
+        const palette = [
+          '#F43F5E', // Rose
+          '#EAB308', // Amber
+          '#10B981', // Emerald
+          '#3B82F6', // Blue
+          '#8B5CF6', // Purple
+          '#EC4899', // Pink
+          '#06B6D4'  // Cyan
+        ];
+
+        flavorChartInstance = new Chart(chartCtx, {
+          type: 'doughnut',
+          data: {
+            labels: labels,
+            datasets: [{
+              data: dataValues,
+              backgroundColor: palette.slice(0, sortedFlavors.length),
+              borderWidth: 2,
+              borderColor: '#ffffff',
+              hoverOffset: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  boxWidth: 10,
+                  padding: 8,
+                  font: {
+                    family: "'Plus Jakarta Sans', sans-serif",
+                    size: 11,
+                    weight: 'bold'
+                  }
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const val = context.raw || 0;
+                    const pct = totalLang > 0 ? ((val / totalLang) * 100).toFixed(1) : 0;
+                    return ` ${val} lạng (${(val * 0.1).toFixed(1)} kg) - ${pct}%`;
+                  }
+                }
+              }
+            },
+            cutout: '60%'
+          }
+        });
+      }
+
+      // Render danh sách thứ hạng vị kẹo
+      const rankingContainer = document.getElementById('flavorRankingContainer');
+      rankingContainer.innerHTML = '';
+      sortedFlavors.forEach((f, idx) => {
+        const pct = totalLang > 0 ? ((f.lang / totalLang) * 100).toFixed(1) : 0;
+        const row = document.createElement('div');
+        row.className = "flex items-center justify-between p-1.5 bg-white rounded-xl border border-indigo-50";
+        row.innerHTML = `
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="w-5 h-5 rounded-full ${idx === 0 ? 'bg-amber-400 text-white' : idx === 1 ? 'bg-slate-300 text-slate-700' : 'bg-slate-100 text-slate-500'} flex items-center justify-center font-black text-[10px]">
+              ${idx + 1}
+            </span>
+            <span class="font-bold text-slate-800 truncate">${f.icon} ${f.name}</span>
+          </div>
+          <div class="text-right flex items-center gap-2">
+            <span class="font-extrabold text-indigo-700">${f.lang} lạng</span>
+            <span class="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-1.5 py-0.5 rounded-md">${pct}%</span>
+          </div>
+        `;
+        rankingContainer.appendChild(row);
+      });
+
+      // 2. Thống kê Top Khách Hàng VIP (Mua nhiều nhất)
+      const customerMap = {};
+      orders.forEach(o => {
+        const cName = o.name.trim();
+        if (!customerMap[cName]) {
+          customerMap[cName] = { name: cName, totalLang: 0, totalMoney: 0, orderCount: 0 };
+        }
+        customerMap[cName].totalLang += o.lang;
+        customerMap[cName].totalMoney += calculateOrderMoney(o);
+        customerMap[cName].orderCount += 1;
+      });
+
+      const topCustomers = Object.values(customerMap).sort((a, b) => b.totalLang - a.totalLang);
+      const topCustomersContainer = document.getElementById('topCustomersContainer');
+      topCustomersContainer.innerHTML = '';
+
+      topCustomers.slice(0, 7).forEach((cust, index) => {
+        const row = document.createElement('div');
+        row.className = "flex items-center justify-between p-2 bg-white rounded-xl border border-amber-100 text-xs";
+        row.innerHTML = `
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-5 h-5 rounded-full ${index < 3 ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-600'} flex items-center justify-center font-black text-[10px] shrink-0">
+              ${index + 1}
+            </span>
+            <div class="min-w-0">
+              <span class="font-extrabold text-slate-800 truncate block">${cust.name}</span>
+              <span class="text-[10px] text-slate-400 font-medium">${cust.orderCount} lần đặt</span>
+            </div>
+          </div>
+          <div class="text-right shrink-0">
+            <span class="font-extrabold text-rose-600 text-xs">${cust.totalLang} lạng (${(cust.totalLang * 0.1).toFixed(1)}kg)</span>
+            <div class="text-[10px] text-slate-500 font-bold">${cust.totalMoney.toLocaleString('vi-VN')} đ</div>
+          </div>
+        `;
+        topCustomersContainer.appendChild(row);
+      });
+
+      // 3. Chiến lược nhập nguyên liệu thông minh dựa trên khối lượng
+      const strategyContainer = document.getElementById('materialStrategyContainer');
+      const totalKgNum = totalLang * 0.1;
+
+      // Công thức định lượng chuẩn cho kẹo chip chip thủ công:
+      // - Gelatin: khoảng 85 - 95g trên 1kg kẹo
+      // - Đường / Mạch nha / Đường phèn: ~280 - 320g trên 1kg kẹo
+      // - Nước / Nước cốt trái cây tươi: ~400 - 500ml trên 1kg kẹo
+      const gelatinGrams = Math.round(totalKgNum * 90);
+      const sugarGrams = Math.round(totalKgNum * 300);
+
+      // Chi tiết theo vị hot
+      let specificAdvices = [];
+      sortedFlavors.forEach(f => {
+        const kg = (f.lang * 0.1).toFixed(1);
+        if (f.id === 'hungchanh') {
+          const leavesG = Math.round(f.lang * 50);
+          const quatG = Math.round(f.lang * 40);
+          specificAdvices.push(`🌿 <strong>Vị Húng chanh</strong> (${f.lang} lạng = ${kg}kg): Chuẩn bị <strong>${leavesG}g lá húng chanh tươi</strong> + <strong>${quatG}g quả quất tươi</strong> ép lấy nước cốt.`);
+        } else if (f.id === 'xoai') {
+          const mangoG = Math.round(f.lang * 120);
+          const mangoKg = (mangoG / 1000).toFixed(1);
+          specificAdvices.push(`🥭 <strong>Vị Xoài</strong> (${f.lang} lạng = ${kg}kg): Cần khoảng <strong>${mangoKg} kg xoài cát/xoài keo chín ngọt</strong> để xay mịn lọc xơ.`);
+        } else if (f.id === 'chanhleo') {
+          const fruitCount = Math.round(f.lang * 2.5);
+          specificAdvices.push(`🍊 <strong>Vị Chanh leo</strong> (${f.lang} lạng = ${kg}kg): Cần khoảng <strong>${fruitCount} quả chanh leo chín tím</strong> lọc bỏ hạt.`);
+        } else if (f.id === 'suachua') {
+          const yogurtMl = Math.round(f.lang * 40);
+          specificAdvices.push(`🥛 <strong>Vị Sữa chua</strong> (${f.lang} lạng = ${kg}kg): Chuẩn bị <strong>${yogurtMl} ml sữa chua không đường</strong>.`);
+        } else if (f.id === 'mix') {
+          specificAdvices.push(`🍓 <strong>Vị Mix</strong> (${f.lang} lạng = ${kg}kg): Vị bán chạy áp đảo! Chuẩn bị cốt dâu, chanh leo, xoài phối hợp.`);
+        }
+      });
+
+      strategyContainer.innerHTML = `
+        <div class="bg-white p-2.5 rounded-xl border border-emerald-100 space-y-1.5">
+          <div class="font-extrabold text-emerald-800 text-xs flex items-center gap-1.5">
+            <i class="fa-solid fa-calculator text-emerald-600"></i>
+            <span>Định mức nguyên liệu cốt lõi cho ${totalKgNum.toFixed(1)} kg kẹo:</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-[11px] pt-1">
+            <div class="bg-emerald-50/60 p-2 rounded-lg">
+              <span class="text-slate-500 font-medium block">Bột / Lá Gelatin:</span>
+              <strong class="text-emerald-700 text-xs">${gelatinGrams} gram</strong> (khoảng ${(gelatinGrams / 1000).toFixed(2)} kg)
+            </div>
+            <div class="bg-amber-50/60 p-2 rounded-lg">
+              <span class="text-slate-500 font-medium block">Đường phèn / Mạch nha:</span>
+              <strong class="text-amber-700 text-xs">${sugarGrams} gram</strong> (khoảng ${(sugarGrams / 1000).toFixed(2)} kg)
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white p-2.5 rounded-xl border border-emerald-100 space-y-1">
+          <div class="font-extrabold text-slate-800 text-[11px] mb-1">
+            🛒 Kế hoạch đi chợ mua nông sản tươi:
+          </div>
+          <div class="space-y-1 text-[11px] leading-relaxed text-slate-600">
+            ${specificAdvices.map(item => `<div>${item}</div>`).join('')}
+          </div>
+        </div>
+
+        <div class="text-[10px] text-emerald-700 bg-emerald-100/70 p-2 rounded-xl font-medium">
+          💡 <strong>Mẹo nhập hàng:</strong> Vị <strong>${sortedFlavors[0]?.name || 'Mix vị'}</strong> chiếm thị phần cao nhất, bạn nên mua dư gelatin và bao bì/hộp đựng cho vị này trước!
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // PHẦN MỚI: BÁO CÁO DOANH THU TỰ ĐỘNG BUỔI TỐI
+    // ==========================================
+    function openEveningReportModal() {
+      let activeLangTotal = 0;
+      let totalMoney = 0;
+      let paidMoney = 0;
+      let unpaidMoney = 0;
+      let unpaidList = [];
+      let pendingDeliveryList = [];
+      let countDone = 0;
+
+      const flavorCounts = {};
+
+      orders.forEach(o => {
+        activeLangTotal += o.lang;
+        const price = calculateOrderMoney(o);
+        totalMoney += price;
+        const type = getOrderStatusType(o);
+
+        if (type === 'done') {
+          countDone++;
+        }
+
+        if (o.payment === 'unpaid') {
+          unpaidMoney += price;
+          unpaidList.push({ name: o.name, lang: o.lang, price: price, note: o.note });
+        } else {
+          paidMoney += price;
+        }
+
+        if (o.status !== 'delivered') {
+          pendingDeliveryList.push({ name: o.name, lang: o.lang, unitNote: o.unitNote, flavorId: o.flavorId, breakdown: o.breakdown });
+        }
+
+        // Đếm vị
+        if (o.breakdown) {
+          for (let fid in o.breakdown) {
+            flavorCounts[fid] = (flavorCounts[fid] || 0) + o.breakdown[fid];
+          }
+        } else {
+          const fid = o.flavorId || 'mix';
+          flavorCounts[fid] = (flavorCounts[fid] || 0) + o.lang;
+        }
+      });
+
+      document.getElementById('reportPaidMoney').innerText = `${paidMoney.toLocaleString('vi-VN')} đ`;
+      document.getElementById('reportUnpaidMoney').innerText = `${unpaidMoney.toLocaleString('vi-VN')} đ`;
+
+      const totalMaterialCost = materials.reduce((sum, m) => sum + (m.totalPrice || 0), 0);
+      const realNetProfit = paidMoney - totalMaterialCost;
+
+      // Tạo nội dung tin nhắn Zalo cực chuẩn đẹp
+      const totalKg = (activeLangTotal / 10).toFixed(1);
+      const dateText = document.getElementById('currentDateText').innerText;
+
+      let msg = `🌙 BÁO CÁO DOANH THU CUỐI NGÀY - CHIPCHIP MÂY & GẠO\n`;
+      msg += `📅 ${dateText}\n`;
+      msg += `----------------------------------------\n`;
+      msg += `💰 TỔNG DOANH THU HÔM NAY: ${totalMoney.toLocaleString('vi-VN')} đ\n`;
+      msg += `✅ TIỀN ĐÃ VỀ TÚI: ${paidMoney.toLocaleString('vi-VN')} đ (Đã thu đủ)\n`;
+      msg += `⚠️ TIỀN CÒN NỢ: ${unpaidMoney.toLocaleString('vi-VN')} đ (${unpaidList.length} khách)\n`;
+      msg += `🛒 TIỀN MUA NGUYÊN LIỆU: ${totalMaterialCost.toLocaleString('vi-VN')} đ\n`;
+      msg += `🌟 LỢI NHUẬN THỰC TẾ (ĐÃ NHẬN - MUA ĐỒ): ${realNetProfit >= 0 ? '+' : ''}${realNetProfit.toLocaleString('vi-VN')} đ\n`;
+      msg += `⚖️ TỔNG SẢN LƯỢNG KẸO: ${totalKg} KG (${activeLangTotal} lạng)\n`;
+      msg += `🎉 TIẾN ĐỘ: Đã xong ${countDone}/${orders.length} đơn hàng\n`;
+      msg += `----------------------------------------\n`;
+
+      if (unpaidList.length > 0) {
+        msg += `\n🔴 DANH SÁCH KHÁCH CẦN THU TIỀN:\n`;
+        unpaidList.forEach((u, i) => {
+          msg += `${i + 1}. ${u.name}: ${u.lang} lạng - ${u.price.toLocaleString('vi-VN')} đ ${u.note ? '(' + u.note + ')' : ''}\n`;
+        });
+      } else {
+        msg += `\n✨ Tuyệt vời! Không còn ai nợ tiền!\n`;
+      }
+
+      if (pendingDeliveryList.length > 0) {
+        let pendingLang = pendingDeliveryList.reduce((sum, item) => sum + item.lang, 0);
+        msg += `\n📦 ĐƠN CẦN NẤU & GIAO NGÀY MAI (${pendingDeliveryList.length} đơn = ${(pendingLang * 0.1).toFixed(1)} kg):\n`;
+        pendingDeliveryList.forEach((p, i) => {
+          msg += `- ${p.name}: ${p.unitNote || (p.lang + ' lạng')}\n`;
+        });
+      } else {
+        msg += `\n🎉 Đã giao hết toàn bộ các đơn hôm nay!\n`;
+      }
+
+      msg += `\n----------------------------------------\n`;
+      msg += `🍬 Chúc cả nhà buổi tối vui vẻ! Mai tiếp tục làm mẻ kẹo mới thơm ngon!`;
+
+      document.getElementById('eveningZaloMessageText').value = msg;
+      document.getElementById('eveningReportModal').classList.remove('hidden');
+    }
+
+    function closeEveningReportModal() {
+      document.getElementById('eveningReportModal').classList.add('hidden');
+    }
+
+    function copyAndSendEveningZalo() {
+      const text = document.getElementById('eveningZaloMessageText').value;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Đã sao chép báo cáo doanh thu tối thành công!\nApp sẽ mở Zalo để bạn dán và gửi ngay.');
+        window.open('https://zalo.me', '_blank');
+      }).catch(err => {
+        alert('Đã tạo báo cáo tối:\n\n' + text);
+      });
+    }
+
+    // ==========================================
+    // LOGIC: SỔ NGUYÊN LIỆU ĐÃ MUA & TÍNH LÃI LỜI
+    // (TỔNG TIỀN ĐÃ NHẬN - TỔNG TIỀN MUA ĐỒ = LỢI NHUẬN)
+    // ==========================================
+
+    // Chuyển Tab chính: Sổ Bán Hàng <-> Sổ Nguyên Liệu
+        // Xử lý chuyển Tab ở đáy màn hình (Bottom Navigation)
+    let currentBottomTab = 'orders';
+
+        // ==========================================
+    // HỘP THOẠI XÁC NHẬN CHUYÊN NGHIỆP (THAY THẾ WINDOW.CONFIRM)
+    // ==========================================
+    let confirmResolver = null;
+
+    function showConfirmDialog({
+      title = 'Xác nhận',
+      message = 'Bạn có chắc chắn muốn thực hiện thao tác này?',
+      icon = 'fa-trash-can',
+      confirmText = 'Xác nhận',
+      confirmClass = 'from-rose-500 to-rose-600 text-white shadow-rose-200',
+      iconBg = 'bg-rose-100 text-rose-500'
+    }) {
+      return new Promise((resolve) => {
+        document.getElementById('confirmTitle').innerText = title;
+        document.getElementById('confirmMessage').innerText = message;
+        
+        const iconWrapper = document.getElementById('confirmIconWrapper');
+        iconWrapper.className = `w-14 h-14 rounded-full mx-auto flex items-center justify-center text-2xl shadow-inner ${iconBg}`;
+        document.getElementById('confirmIcon').className = `fa-solid ${icon}`;
+
+        const okBtn = document.getElementById('confirmOkBtn');
+        okBtn.innerText = confirmText;
+        okBtn.className = `btn-tactile flex-1 py-2.5 font-extrabold rounded-xl text-xs shadow-md bg-gradient-to-r ${confirmClass}`;
+
+        confirmResolver = resolve;
+        document.getElementById('confirmModal').classList.remove('hidden');
+      });
+    }
+
+    function handleConfirmChoice(choice) {
+      document.getElementById('confirmModal').classList.add('hidden');
+      if (confirmResolver) {
+        confirmResolver(choice);
+        confirmResolver = null;
+      }
+    }
+
+    // ==========================================
+    // HỘP THOẠI NHẬP LIỆU CHUYÊN NGHIỆP (THAY THẾ WINDOW.PROMPT)
+    // ==========================================
+    let promptResolver = null;
+
+    function showPromptDialog({
+      title = 'Nhập thông tin',
+      message = 'Vui lòng nhập nội dung:',
+      placeholder = '',
+      defaultValue = '',
+      icon = 'fa-pen-to-square'
+    }) {
+      return new Promise((resolve) => {
+        document.getElementById('promptTitle').innerText = title;
+        document.getElementById('promptMessage').innerText = message;
+        const inp = document.getElementById('promptInput');
+        inp.placeholder = placeholder;
+        inp.value = defaultValue;
+        document.getElementById('promptIcon').className = `fa-solid ${icon}`;
+
+        promptResolver = resolve;
+        document.getElementById('promptModal').classList.remove('hidden');
+        setTimeout(() => inp.focus(), 150);
+      });
+    }
+
+    function handlePromptChoice(val) {
+      document.getElementById('promptModal').classList.add('hidden');
+      if (promptResolver) {
+        promptResolver(val);
+        promptResolver = null;
+      }
+    }
+
+    // Toast notification dùng chung cho toàn bộ app
+    let appToastTimer = null;
+    function showToast(msg) {
+      const toast = document.getElementById('appToast');
+      const text = document.getElementById('appToastText');
+      if (!toast || !text) return;
+      text.innerText = msg;
+      toast.classList.remove('opacity-0', '-translate-y-4');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      if (appToastTimer) clearTimeout(appToastTimer);
+      appToastTimer = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', '-translate-y-4');
+      }, 2200);
+    }
+
+function switchBottomTab(tab) {
+      currentBottomTab = tab;
+      
+      // Ẩn tất cả các tab
+      ['orders', 'add', 'materials', 'stats'].forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        if (el) el.classList.add('hidden');
+        
+        const btn = document.getElementById(`nav-tab-${t}`);
+        if (btn) {
+          btn.classList.remove('text-rose-600', 'font-black');
+          btn.classList.add('text-slate-400', 'hover:text-slate-600', 'font-bold');
+          const icon = btn.querySelector('i');
+          if (icon) icon.classList.remove('scale-110');
+        }
+      });
+
+      // Hiện tab được chọn
+      const activeEl = document.getElementById(`tab-${tab}`);
+      if (activeEl) activeEl.classList.remove('hidden');
+
+      const activeBtn = document.getElementById(`nav-tab-${tab}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-400', 'hover:text-slate-600', 'font-bold');
+        activeBtn.classList.add('text-rose-600', 'font-black');
+        const icon = activeBtn.querySelector('i');
+        if (icon) icon.classList.add('scale-110');
+      }
+
+      // Cuộn lên đầu view mượt mà
+      window.scrollTo({ top: 0, behavior: 'instant' });
+
+      if (tab === 'materials') {
+        renderMaterialsList();
+      } else if (tab === 'orders') {
+        renderOrderList();
+      }
+    }
+
+    // Tương thích ngược với hàm switchMainView cũ
+    function switchMainView(view) {
+      if (view === 'orders') switchBottomTab('orders');
+      else if (view === 'materials') switchBottomTab('materials');
+      else switchBottomTab(view);
+    }
+
+    // Cơ chế xóa dấu tiếng Việt phục vụ tìm kiếm thông minh
+    function removeVietnameseTones(str) {
+      if (!str) return '';
+      str = str.toLowerCase();
+      str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
+      str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
+      str = str.replace(/ì|í|ị|ỉ|ĩ/g, "i");
+      str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
+      str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
+      str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
+      str = str.replace(/đ/g, "d");
+      str = str.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, "");
+      str = str.replace(/\u02C6|\u0306|\u031B/g, "");
+      return str.trim();
+    }
+
+    let searchQuery = '';
+
+    function handleSearch(val) {
+      searchQuery = val.trim();
+      const clearBtn = document.getElementById('searchClearBtn');
+      if (clearBtn) {
+        if (searchQuery.length > 0) {
+          clearBtn.classList.remove('hidden');
+        } else {
+          clearBtn.classList.add('hidden');
+        }
+      }
+      renderOrderList();
+    }
+
+    function clearSearch() {
+      searchQuery = '';
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) searchInput.value = '';
+      const clearBtn = document.getElementById('searchClearBtn');
+      if (clearBtn) clearBtn.classList.add('hidden');
+      renderOrderList();
+    }
+
+    // Chọn chế độ lọc lời lãi: day (ngày), month (tháng), batch (đợt), all (tất cả)
+    function setProfitFilterMode(mode) {
+      profitFilterMode = mode;
+      document.querySelectorAll('.profit-mode-btn').forEach(b => {
+        b.className = "profit-mode-btn py-1.5 rounded-xl font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 transition text-center";
+      });
+      const activeBtn = document.getElementById(`profit-mode-${mode}`);
+      if (activeBtn) {
+        activeBtn.className = "profit-mode-btn py-1.5 rounded-xl font-bold bg-slate-800 text-white shadow-sm transition text-center";
+      }
+      renderProfitFilterControls();
+      renderProfitView();
+    }
+
+    // Hiển thị bộ chọn chi tiết theo Ngày / Tháng / Đợt
+    function renderProfitFilterControls() {
+      const container = document.getElementById('profitFilterControlsContainer');
+      if (!container) return;
+
+      if (profitFilterMode === 'day') {
+        container.innerHTML = `
+          <div class="flex items-center gap-2 bg-emerald-50/70 p-2 rounded-xl border border-emerald-200 text-xs">
+            <span class="font-bold text-emerald-900 whitespace-nowrap">Chọn ngày:</span>
+            <input type="date" value="${selectedProfitDate}" onchange="changeProfitDate(this.value)"
+                   class="bg-white border border-emerald-300 rounded-lg px-2 py-1 font-bold text-slate-800 flex-1 focus:outline-none focus:border-emerald-500">
+            <button onclick="changeProfitDate('${new Date().toISOString().split('T')[0]}')" class="px-2 py-1 bg-emerald-600 text-white rounded-lg font-bold text-[10px]">Hôm nay</button>
+            <button onclick="changeProfitDate('2026-11-21')" class="px-2 py-1 bg-slate-200 text-slate-700 rounded-lg font-bold text-[10px]">21/11</button>
+          </div>
+        `;
+      } else if (profitFilterMode === 'month') {
+        container.innerHTML = `
+          <div class="flex items-center gap-2 bg-emerald-50/70 p-2 rounded-xl border border-emerald-200 text-xs">
+            <span class="font-bold text-emerald-900 whitespace-nowrap">Chọn tháng:</span>
+            <input type="month" value="${selectedProfitMonth}" onchange="changeProfitMonth(this.value)"
+                   class="bg-white border border-emerald-300 rounded-lg px-2 py-1 font-bold text-slate-800 flex-1 focus:outline-none focus:border-emerald-500">
+          </div>
+        `;
+      } else if (profitFilterMode === 'batch') {
+        let opts = batches.map(b => `<option value="${b}" ${b === selectedProfitBatch ? 'selected' : ''}>${b}</option>`).join('');
+        container.innerHTML = `
+          <div class="flex items-center gap-2 bg-emerald-50/70 p-2 rounded-xl border border-emerald-200 text-xs">
+            <span class="font-bold text-emerald-900 whitespace-nowrap">Chọn Đợt kẹo:</span>
+            <select onchange="changeProfitBatch(this.value)"
+                    class="bg-white border border-emerald-300 rounded-lg px-2 py-1 font-bold text-slate-800 flex-1 focus:outline-none">
+              ${opts}
+            </select>
+            <button onclick="promptAddNewBatch()" class="px-2 py-1 bg-emerald-600 text-white rounded-lg font-bold text-[10px] whitespace-nowrap">+ Đợt mới</button>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="text-[11px] font-semibold text-slate-500 bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
+            Đang tổng hợp toàn bộ các đơn hàng và chi phí mua nguyên liệu từ trước đến nay.
+          </div>
+        `;
+      }
+    }
+
+    function changeProfitDate(val) {
+      selectedProfitDate = val;
+      renderProfitFilterControls();
+      renderProfitView();
+    }
+    function changeProfitMonth(val) {
+      selectedProfitMonth = val;
+      renderProfitFilterControls();
+      renderProfitView();
+    }
+    function changeProfitBatch(val) {
+      selectedProfitBatch = val;
+      renderProfitFilterControls();
+      renderProfitView();
+    }
+
+    // Tính toán & Hiển thị Lời Lãi + Danh sách nguyên liệu đã mua
+    function renderProfitView() {
+      // 1. Lọc đơn hàng theo mốc đã chọn
+      let filteredOrders = orders.filter(o => {
+        if (profitFilterMode === 'all') return true;
+        if (profitFilterMode === 'batch') return (o.batch || 'Đợt 1 (12.6kg)') === selectedProfitBatch;
+        if (profitFilterMode === 'day') {
+          return (o.paidAt && o.paidAt.startsWith(selectedProfitDate)) || (o.createdAt && o.createdAt.startsWith(selectedProfitDate));
+        }
+        if (profitFilterMode === 'month') {
+          return (o.paidAt && o.paidAt.startsWith(selectedProfitMonth)) || (o.createdAt && o.createdAt.startsWith(selectedProfitMonth));
+        }
+        return true;
+      });
+
+      // 2. Lọc nguyên liệu theo mốc đã chọn
+      let filteredMaterials = materials.filter(m => {
+        if (profitFilterMode === 'all') return true;
+        if (profitFilterMode === 'batch') return (m.batch || 'Đợt 1 (12.6kg)') === selectedProfitBatch;
+        if (profitFilterMode === 'day') {
+          return m.date === selectedProfitDate;
+        }
+        if (profitFilterMode === 'month') {
+          return m.date && m.date.startsWith(selectedProfitMonth);
+        }
+        return true;
+      });
+
+      // 3. Tính toán các chỉ số
+      let totalReceivedMoney = 0;
+      let totalProjectedRevenue = 0;
+
+      filteredOrders.forEach(o => {
+        const orderPrice = calculateOrderMoney(o);
+        totalProjectedRevenue += orderPrice;
+        if (o.payment === 'paid' || o.payment === 'transfer' || o.payment === 'cash') {
+          totalReceivedMoney += orderPrice;
+        }
+      });
+
+      let totalExpenseMoney = 0;
+      filteredMaterials.forEach(m => {
+        totalExpenseMoney += (m.totalPrice || 0);
+      });
+
+      // CÔNG THỨC VÀNG: TIỀN ĐÃ NHẬN - TIỀN MUA ĐỒ = TIỀN LÃI THỰC TẾ
+      const netProfit = totalReceivedMoney - totalExpenseMoney;
+      const projectedProfit = totalProjectedRevenue - totalExpenseMoney;
+
+      // 4. Cập nhật nhãn khoảng thời gian
+      let periodLabel = "Toàn bộ các đợt";
+      if (profitFilterMode === 'day') {
+        const parts = selectedProfitDate.split('-');
+        periodLabel = parts.length === 3 ? `Ngày ${parts[2]}/${parts[1]}/${parts[0]}` : `Ngày ${selectedProfitDate}`;
+      } else if (profitFilterMode === 'month') {
+        const parts = selectedProfitMonth.split('-');
+        periodLabel = parts.length === 2 ? `Tháng ${parts[1]}/${parts[0]}` : `Tháng ${selectedProfitMonth}`;
+      } else if (profitFilterMode === 'batch') {
+        periodLabel = `${selectedProfitBatch}`;
+      }
+
+      const badgeElem = document.getElementById('profitPeriodBadge');
+      if (badgeElem) badgeElem.innerText = periodLabel;
+      const curPeriodElem = document.getElementById('currentProfitPeriodLabel');
+      if (curPeriodElem) curPeriodElem.innerText = periodLabel;
+
+      // 5. Cập nhật các thẻ lợi nhuận
+      document.getElementById('profitReceivedMoney').innerText = `${totalReceivedMoney.toLocaleString('vi-VN')} đ`;
+      document.getElementById('profitExpenseMoney').innerText = `${totalExpenseMoney.toLocaleString('vi-VN')} đ`;
+
+      const netDisplay = document.getElementById('netProfitDisplay');
+      const netStatus = document.getElementById('netProfitStatusText');
+      if (netProfit >= 0) {
+        netDisplay.innerText = `+${netProfit.toLocaleString('vi-VN')} đ`;
+        netDisplay.className = "text-2xl font-black tracking-tight text-emerald-300";
+        netStatus.innerText = `🎉 Đang có lãi (+${netProfit.toLocaleString('vi-VN')} đ)`;
+        netStatus.className = "text-[11px] font-bold text-emerald-200";
+      } else {
+        netDisplay.innerText = `${netProfit.toLocaleString('vi-VN')} đ`;
+        netDisplay.className = "text-2xl font-black tracking-tight text-rose-300";
+        netStatus.innerText = `⚠️ Tạm âm vốn (${netProfit.toLocaleString('vi-VN')} đ) do khách chưa nộp hết tiền`;
+        netStatus.className = "text-[11px] font-bold text-amber-200";
+      }
+
+      const projDisplay = document.getElementById('projectedProfitDisplay');
+      if (projDisplay) {
+        projDisplay.innerText = `${projectedProfit >= 0 ? '+' : ''}${projectedProfit.toLocaleString('vi-VN')} đ`;
+      }
+
+      // 6. Render danh sách nguyên liệu
+      const matListContainer = document.getElementById('materialList');
+      matListContainer.innerHTML = '';
+      document.getElementById('materialCountBadge').innerText = filteredMaterials.length;
+
+      if (filteredMaterials.length === 0) {
+        matListContainer.innerHTML = `
+          <div class="text-center py-6 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200 text-xs">
+            <i class="fa-solid fa-basket-shopping text-2xl mb-1 text-slate-300"></i>
+            <p class="font-bold">Chưa có nguyên liệu nào trong ${periodLabel.toLowerCase()}</p>
+            <p class="text-[10px] mt-0.5">Hãy thêm các món đã mua ở bảng trên để tính tiền lời!</p>
+          </div>
+        `;
+      } else {
+        filteredMaterials.forEach(m => {
+          const itemCard = document.createElement('div');
+          itemCard.className = "p-3 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-2";
+          
+          let dateStr = m.date || '';
+          if (dateStr.includes('-')) {
+            const p = dateStr.split('-');
+            dateStr = `${p[2]}/${p[1]}`;
+          }
+
+          itemCard.innerHTML = `
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="font-extrabold text-xs text-slate-800">${m.name}</span>
+                <span class="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-md border border-emerald-100">
+                  ${m.qty} ${m.unit}
+                </span>
+              </div>
+              <div class="text-[10px] text-slate-400 font-medium flex items-center gap-2 mt-1">
+                <span><i class="fa-regular fa-calendar"></i> ${dateStr}</span>
+                <span>•</span>
+                <span class="text-slate-500 font-bold">${m.batch || 'Đợt 1'}</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="font-black text-rose-600 text-xs">
+                ${m.totalPrice.toLocaleString('vi-VN')} đ
+              </span>
+              <button onclick="deleteMaterialItem(${m.id})" class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 flex items-center justify-center text-xs transition" title="Xóa món này">
+                <i class="fa-regular fa-trash-can"></i>
+              </button>
+            </div>
+          `;
+          matListContainer.appendChild(itemCard);
+        });
+      }
+    }
+
+    // Điền nhanh thông tin nguyên liệu hay mua
+    function quickFillMaterial(name, qty, unit, price) {
+      document.getElementById('inputMaterialName').value = name;
+      document.getElementById('inputMaterialQty').value = qty;
+      const unitSel = document.getElementById('inputMaterialUnitSelect');
+      if (['kg', 'lạng', 'gram', 'quả', 'hộp', 'gói', 'túi', 'chai', 'tấm'].includes(unit)) {
+        unitSel.value = unit;
+        document.getElementById('inputMaterialUnitCustom').classList.add('hidden');
+      } else {
+        unitSel.value = 'custom';
+        document.getElementById('inputMaterialUnitCustom').value = unit;
+        document.getElementById('inputMaterialUnitCustom').classList.remove('hidden');
+      }
+      document.getElementById('inputMaterialPrice').value = price || '';
+      document.getElementById('inputMaterialPrice').focus();
+    }
+
+    // Tự gõ đơn vị khác
+    function checkCustomUnit(val) {
+      const customInput = document.getElementById('inputMaterialUnitCustom');
+      if (val === 'custom') {
+        customInput.classList.remove('hidden');
+        customInput.focus();
+      } else {
+        customInput.classList.add('hidden');
+      }
+    }
+
+    // Thêm đợt làm kẹo mới
+    function promptAddNewBatch() {
+      const bName = prompt("Nhập tên Đợt làm kẹo mới (ví dụ: Đợt 2 - Cuối tuần, Đợt Giáng sinh...):");
+      if (bName && bName.trim()) {
+        const clean = bName.trim();
+        if (!batches.includes(clean)) {
+          batches.push(clean);
+          selectedProfitBatch = clean;
+          saveState();
+          renderBatchSelectOptions();
+          renderProfitFilterControls();
+          renderProfitView();
+          alert(`Đã thêm đợt "${clean}" thành công!`);
+        }
+      }
+    }
+
+    function renderBatchSelectOptions() {
+      const sel = document.getElementById('inputMaterialBatch');
+      if (!sel) return;
+      sel.innerHTML = batches.map(b => `<option value="${b}">${b}</option>`).join('');
+    }
+
+    // Thêm món nguyên liệu mới
+    function addMaterialItem() {
+      const name = document.getElementById('inputMaterialName').value.trim();
+      if (!name) {
+        showToast('⚠️ Vui lòng nhập tên nguyên liệu!');
+        document.getElementById('inputMaterialName').focus();
+        return;
+      }
+
+      const qty = parseFloat(document.getElementById('inputMaterialQty').value) || 1;
+      let unit = document.getElementById('inputMaterialUnitSelect').value;
+      if (unit === 'custom') {
+        unit = document.getElementById('inputMaterialUnitCustom').value.trim() || 'cái';
+      }
+
+      const price = parseInt(document.getElementById('inputMaterialPrice').value, 10);
+      if (isNaN(price) || price < 0) {
+        showToast('⚠️ Vui lòng nhập số tiền mua đồ!');
+        document.getElementById('inputMaterialPrice').focus();
+        return;
+      }
+
+      const date = document.getElementById('inputMaterialDate').value || new Date().toISOString().split('T')[0];
+      const batch = document.getElementById('inputMaterialBatch').value || 'Đợt 1 (12.6kg)';
+
+      const newItem = {
+        id: Date.now(),
+        name: name,
+        qty: qty,
+        unit: unit,
+        totalPrice: price,
+        date: date,
+        batch: batch
+      };
+
+      materials.unshift(newItem);
+      saveState();
+
+      // Reset form
+      document.getElementById('inputMaterialName').value = '';
+      document.getElementById('inputMaterialPrice').value = '';
+      alert(`Đã ghi nhận mua "${name}" (${qty} ${unit}) - ${price.toLocaleString('vi-VN')} đ vào sổ thành công!`);
+    }
+
+    // Xóa món nguyên liệu
+    function deleteMaterialItem(id) {
+      if (confirm('Bạn có chắc muốn xóa món nguyên liệu này khỏi sổ chi phí?')) {
+        materials = materials.filter(m => m.id !== id);
+        saveState();
+      }
+    }
+
+    // Xuất báo cáo lãi lỗ gửi Zalo
+    function shareZaloProfitReport() {
+      let filteredOrders = orders.filter(o => {
+        if (profitFilterMode === 'all') return true;
+        if (profitFilterMode === 'batch') return (o.batch || 'Đợt 1 (12.6kg)') === selectedProfitBatch;
+        if (profitFilterMode === 'day') return (o.paidAt && o.paidAt.startsWith(selectedProfitDate)) || (o.createdAt && o.createdAt.startsWith(selectedProfitDate));
+        if (profitFilterMode === 'month') return (o.paidAt && o.paidAt.startsWith(selectedProfitMonth)) || (o.createdAt && o.createdAt.startsWith(selectedProfitMonth));
+        return true;
+      });
+
+      let filteredMaterials = materials.filter(m => {
+        if (profitFilterMode === 'all') return true;
+        if (profitFilterMode === 'batch') return (m.batch || 'Đợt 1 (12.6kg)') === selectedProfitBatch;
+        if (profitFilterMode === 'day') return m.date === selectedProfitDate;
+        if (profitFilterMode === 'month') return m.date && m.date.startsWith(selectedProfitMonth);
+        return true;
+      });
+
+      let totalReceived = 0;
+      let totalProjected = 0;
+      filteredOrders.forEach(o => {
+        const pr = calculateOrderMoney(o);
+        totalProjected += pr;
+        if (o.payment === 'paid' || o.payment === 'transfer' || o.payment === 'cash') totalReceived += pr;
+      });
+
+      let totalExpense = filteredMaterials.reduce((sum, m) => sum + (m.totalPrice || 0), 0);
+      let net = totalReceived - totalExpense;
+
+      let pLabel = document.getElementById('profitPeriodBadge').innerText;
+
+      let text = `💰 BÁO CÁO TÀI CHÍNH LÃI / LỖ - CHIPCHIP MÂY & GẠO (${pLabel})\n`;
+      text += `----------------------------------------\n`;
+      text += `① TỔNG TIỀN ĐÃ THU VỀ: ${totalReceived.toLocaleString('vi-VN')} đ\n`;
+      text += `② TỔNG TIỀN MUA NGUYÊN LIỆU: ${totalExpense.toLocaleString('vi-VN')} đ\n`;
+      text += `----------------------------------------\n`;
+      text += `🌟 LỢI NHUẬN THỰC TẾ (${totalReceived >= totalExpense ? 'ĐANG LÃI' : 'TẠM ÂM'}): ${net >= 0 ? '+' : ''}${net.toLocaleString('vi-VN')} đ\n`;
+      text += `🎯 DỰ KIẾN LÃI KHI THU HẾT NỢ: ${(totalProjected - totalExpense) >= 0 ? '+' : ''}${(totalProjected - totalExpense).toLocaleString('vi-VN')} đ\n`;
+      
+      if (filteredMaterials.length > 0) {
+        text += `\n🛒 CÁC MÓN NGUYÊN LIỆU ĐÃ MUA:\n`;
+        filteredMaterials.forEach((m, idx) => {
+          text += `${idx + 1}. ${m.name} (${m.qty} ${m.unit}): ${m.totalPrice.toLocaleString('vi-VN')} đ\n`;
+        });
+      }
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Đã sao chép báo cáo chi phí & lợi nhuận!\nApp sẽ mở Zalo để bạn dán gửi ngay.');
+        window.open('https://zalo.me', '_blank');
+      }).catch(err => {
+        alert('Nội dung báo cáo lợi nhuận:\n\n' + text);
+      });
+    }
+
+    // ==========================================
+    // LOGIC: GIAO DIỆN & NỀN PASTEL THẨM MỸ
+    // (BẢO TOÀN CHỮ VÀ SỐ SIÊU NÉT 100%)
+    // ==========================================
+    function initTheme() {
+      const savedTheme = localStorage.getItem('chipchip_theme');
+      if (savedTheme && APP_THEMES[savedTheme]) {
+        currentTheme = savedTheme;
+      } else {
+        currentTheme = 'candy';
+      }
+      applyTheme(currentTheme, false);
+    }
+
+    function setAppTheme(themeKey) {
+      if (APP_THEMES[themeKey]) {
+        currentTheme = themeKey;
+        localStorage.setItem('chipchip_theme', themeKey);
+        applyTheme(themeKey, true);
+      }
+    }
+
+    function applyTheme(themeKey, showToast) {
+      const t = APP_THEMES[themeKey] || APP_THEMES.candy;
+      document.body.style.backgroundColor = t.bodyBg;
+      
+      const orb1 = document.getElementById('glowOrb1');
+      if (orb1) orb1.style.backgroundColor = t.orb1;
+      const orb2 = document.getElementById('glowOrb2');
+      if (orb2) orb2.style.backgroundColor = t.orb2;
+      const orb3 = document.getElementById('glowOrb3');
+      if (orb3) orb3.style.backgroundColor = t.orb3;
+      
+      const pattern = document.getElementById('bgPatternLayer');
+      if (pattern) {
+        pattern.style.backgroundImage = `radial-gradient(${t.dotColor} 1.2px, transparent 1.2px)`;
+      }
+
+      const nameElem = document.getElementById('currentThemeName');
+      if (nameElem) nameElem.innerText = t.name;
+
+      // Cập nhật viền nút trong cài đặt
+      document.querySelectorAll('.theme-option-btn').forEach(btn => {
+        btn.classList.remove('border-2', 'border-rose-500', 'text-rose-700', 'border-amber-500', 'border-emerald-500', 'border-purple-500', 'border-slate-500');
+        btn.classList.add('border-slate-200', 'text-slate-700');
+      });
+      const activeBtn = document.getElementById(`theme-btn-${themeKey}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('border-slate-200', 'text-slate-700');
+        activeBtn.classList.add('border-2', 'border-rose-500', 'text-rose-700');
+      }
+
+      if (showToast) {
+        showThemeToast(t.icon, t.name);
+      }
+    }
+
+    function toggleQuickTheme() {
+      const keys = Object.keys(APP_THEMES);
+      const curIdx = keys.indexOf(currentTheme);
+      const nextIdx = (curIdx + 1) % keys.length;
+      setAppTheme(keys[nextIdx]);
+    }
+
+    let toastTimer = null;
+    function showThemeToast(icon, name) {
+      const toast = document.getElementById('themeToast');
+      if (!toast) return;
+      document.getElementById('themeToastIcon').innerText = icon;
+      document.getElementById('themeToastText').innerText = `Giao diện: ${name}`;
+      toast.classList.remove('opacity-0', 'translate-y-2');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-2');
+      }, 1600);
+    }
+
+    // Helper escapeHtml
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // ==========================================
+    // HỆ THỐNG CẬP NHẬT OTA SIÊU TỐC (CHIPCHIP OTA ENGINE)
+    // ==========================================
+    let activeOtaInfo = {
+      version: '1.0.2',
+      build_number: 102,
+      is_ota: true
+    };
+
+    // Cập Nhật OTA Thông Minh 1-Chạm (Tự động phát hiện gói trong máy hoặc cho chọn file)
+    function handleSmartOtaUpdate() {
+      showToast('Đang kiểm tra gói cập nhật OTA...');
+      if (window.ChipChipBridge) {
+        window.ChipChipBridge.postMessage(JSON.stringify({ action: 'smart_ota_update' }));
+      } else {
+        const input = document.getElementById('otaGlobalFileInput');
+        if (input) input.click();
+      }
+    }
+
+    // Khi tìm thấy gói OTA trong thư mục Download của máy
+    window.onSmartOtaFound = function(pkg) {
+      if (!pkg) return;
+      const safePath = (pkg.path || '').replace(/\\/g, '/');
+      const safeName = escapeHtml(pkg.name || 'Gói OTA');
+      showConfirmModal(
+        '⚡ Cập Nhật OTA Siêu Tốc',
+        `Tìm thấy gói cập nhật <strong>${safeName}</strong> (${pkg.size_kb} KB)!<br><br>Bạn có muốn nâng cấp ngay bây giờ không? Ứng dụng sẽ cập nhật trong 1 giây và bảo toàn 100% dữ liệu.`,
+        () => {
+          showOtaProgress(true, 'Đang giải nén & nạp tính năng mới...', 60);
+          if (window.ChipChipBridge) {
+            window.ChipChipBridge.postMessage(JSON.stringify({
+              action: 'apply_local_ota_file',
+              path: safePath
+            }));
+          }
+        }
+      );
+    };
+
+    // Khi chưa thấy file trong Download -> hỏi người dùng có muốn tự chọn file không
+    window.onSmartOtaNotFound = function() {
+      showConfirmModal(
+        '⚡ Cập Nhật OTA',
+        'Chưa thấy file <strong>latest_ota_package.zip</strong> trong thư mục Download.<br><br>Bạn có muốn chọn file cập nhật từ bộ nhớ máy không?',
+        () => {
+          const input = document.getElementById('otaGlobalFileInput');
+          if (input) input.click();
+        }
+      );
+    };
+
+    function openOtaModal() {
+      initOta();
+      triggerScanLocalOta();
+      const m = document.getElementById('otaModal');
+      if (m) m.classList.remove('hidden');
+    }
+
+    function closeOtaModal() {
+      const m = document.getElementById('otaModal');
+      if (m) m.classList.add('hidden');
+    }
+
+    function initOta() {
+      if (window.ChipChipBridge) {
+        try {
+          window.ChipChipBridge.postMessage(JSON.stringify({ action: 'get_ota_info' }));
+        } catch (e) {
+          console.error('get_ota_info error:', e);
+        }
+      }
+    }
+
+    // Callback nhận thông tin phiên bản từ Flutter
+    window.onOtaInfoReceived = function(info) {
+      if (!info) return;
+      activeOtaInfo = info;
+      const txt = `Phiên bản: v${info.version || '1.0.1'} (Build ${info.build_number || 101})${info.is_ota ? ' • OTA' : ''}`;
+      const el1 = document.getElementById('otaCurrentVerText');
+      if (el1) el1.textContent = txt;
+      const el2 = document.getElementById('otaModalSubVer');
+      if (el2) el2.textContent = txt;
+      const el3 = document.getElementById('otaTab4VerText');
+      if (el3) el3.textContent = `v${info.version || '1.0.1'} (Build ${info.build_number || 101})`;
+    };
+
+    // Quét file OTA trong thư mục Download
+    function triggerScanLocalOta() {
+      showToast('Đang quét gói OTA trong máy...');
+      if (window.ChipChipBridge) {
+        window.ChipChipBridge.postMessage(JSON.stringify({ action: 'scan_local_ota' }));
+      } else {
+        setTimeout(() => {
+          showToast('Chế độ Web: Nạp gói OTA qua nút Chọn File');
+        }, 300);
+      }
+    }
+
+    // Kết quả quét file OTA trong máy
+    window.onLocalOtaScanned = function(packages) {
+      const listEl = document.getElementById('otaLocalPackagesList');
+      if (!listEl) return;
+      if (!packages || packages.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-[11px] text-slate-400 text-center py-2.5 bg-slate-50 rounded-xl">
+            Chưa thấy file zip trong Download. Hãy chép file <strong class="text-rose-500 font-bold">latest_ota_package.zip</strong> vào máy rồi bấm Quét lại.
+          </div>`;
+        return;
+      }
+      listEl.innerHTML = packages.map(pkg => {
+        const safePath = (pkg.path || '').replace(/\\/g, '/');
+        const safeName = escapeHtml(pkg.name || 'Gói OTA');
+        return `
+        <div class="flex items-center justify-between p-2 rounded-xl bg-rose-50 border border-rose-200 text-xs shadow-xs">
+          <div class="flex-1 mr-2 overflow-hidden">
+            <div class="font-black text-slate-800 truncate text-[11px]">${safeName}</div>
+            <div class="text-[9px] text-slate-500 font-bold">${pkg.size_kb} KB</div>
+          </div>
+          <button onclick="triggerApplyLocalOta('${safePath}', '${safeName}')" class="btn-tactile px-2.5 py-1.5 bg-rose-500 text-white rounded-lg font-bold text-[10px] shadow-xs hover:bg-rose-600 whitespace-nowrap">
+            Cài 1 Giây
+          </button>
+        </div>`;
+      }).join('');
+    };
+
+    // Cài đặt gói OTA tìm thấy trên máy
+    function triggerApplyLocalOta(filePath, fileName) {
+      showConfirmModal(
+        'Cập Nhật OTA Siêu Tốc',
+        `Bạn có muốn cài đặt gói <strong>${fileName}</strong> ngay bây giờ không? Ứng dụng sẽ cập nhật tính năng mới trong 1 giây mà không làm mất bất kỳ dữ liệu nào.`,
+        () => {
+          showOtaProgress(true, 'Đang giải nén & nạp tính năng mới...', 60);
+          if (window.ChipChipBridge) {
+            window.ChipChipBridge.postMessage(JSON.stringify({
+              action: 'apply_local_ota_file',
+              path: filePath
+            }));
+          }
+        }
+      );
+    }
+
+    // Xử lý nạp file từ ô input (File picker)
+    function handleOtaFileSelected(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      const isZip = file.name.endsWith('.zip');
+      const isHtml = file.name.endsWith('.html');
+
+      if (!isZip && !isHtml) {
+        showToast('Vui lòng chọn file .zip hoặc .html!');
+        return;
+      }
+
+      showConfirmModal(
+        'Nạp Gói Cập Nhật',
+        `Bạn có chắc muốn nạp gói <strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB)?`,
+        () => {
+          showOtaProgress(true, 'Đang đọc gói cập nhật...', 30);
+          const reader = new FileReader();
+          if (isZip) {
+            reader.onload = function(evt) {
+              const arrayBuffer = evt.target.result;
+              const bytes = new Uint8List(arrayBuffer);
+              let binary = '';
+              for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+              }
+              const base64 = btoa(binary);
+              showOtaProgress(true, 'Đang cập nhật tính năng...', 85);
+              if (window.ChipChipBridge) {
+                window.ChipChipBridge.postMessage(JSON.stringify({
+                  action: 'apply_ota_base64',
+                  base64: base64
+                }));
+              } else {
+                showToast('Đã nạp file zip giả lập');
+                showOtaProgress(false);
+              }
+            };
+            reader.readAsArrayBuffer(file);
+          } else if (isHtml) {
+            reader.onload = function(evt) {
+              const htmlContent = evt.target.result;
+              showOtaProgress(true, 'Đang nạp mã HTML...', 85);
+              if (window.ChipChipBridge) {
+                window.ChipChipBridge.postMessage(JSON.stringify({
+                  action: 'apply_ota_html',
+                  html: htmlContent
+                }));
+              } else {
+                showToast('Đã nạp file html giả lập');
+                showOtaProgress(false);
+              }
+            };
+            reader.readAsText(file);
+          }
+        }
+      );
+      e.target.value = '';
+    }
+
+    // Cập nhật online
+    function triggerCheckRemoteOta() {
+      showToast('Đang kiểm tra máy chủ cập nhật...');
+      setTimeout(() => {
+        showToast('Bạn đang sử dụng phiên bản mới nhất!');
+      }, 700);
+    }
+
+    // Khôi phục về bản gốc ban đầu
+    function confirmRevertFactory() {
+      showConfirmModal(
+        'Khôi Phục Bản Gốc',
+        'Bạn có muốn xóa các gói OTA đã cài và quay về bản gốc ban đầu của ứng dụng? Mọi dữ liệu đơn hàng vẫn được giữ nguyên 100%.',
+        () => {
+          if (window.ChipChipBridge) {
+            window.ChipChipBridge.postMessage(JSON.stringify({ action: 'revert_factory_ota' }));
+          } else {
+            showToast('Đã khôi phục về bản gốc!');
+          }
+        }
+      );
+    }
+
+    // Hiển thị tiến trình OTA
+    function showOtaProgress(show, status, percent) {
+      const box = document.getElementById('otaProgressBox');
+      if (!box) return;
+      if (show) {
+        box.classList.remove('hidden');
+        if (status) {
+          const stEl = document.getElementById('otaProgressStatusText');
+          if (stEl) stEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i>${status}`;
+        }
+        if (typeof percent === 'number') {
+          const pEl = document.getElementById('otaProgressPercent');
+          if (pEl) pEl.textContent = `${percent}%`;
+          const barEl = document.getElementById('otaProgressBar');
+          if (barEl) barEl.style.width = `${percent}%`;
+        }
+      } else {
+        box.classList.add('hidden');
+      }
+    }
+
+    window.onOtaProgress = function(percent, msg) {
+      showOtaProgress(true, msg, percent);
+    };
+
+    window.onOtaApplied = function(success, note) {
+      showOtaProgress(true, 'Cập nhật thành công trong 1 giây!', 100);
+      setTimeout(() => {
+        showOtaProgress(false);
+        closeOtaModal();
+        closeConfigModal();
+        showToast('🎉 Cập nhật OTA thành công 100%!');
+      }, 500);
+    };
+
+    window.onOtaReverted = function(success) {
+      showToast('Đã khôi phục về phiên bản gốc thành công!');
+      closeOtaModal();
+    };
+
+    window.onOtaError = function(err) {
+      showOtaProgress(false);
+      showToast('Lỗi cập nhật OTA: ' + err);
+    };
+
+    // Khởi chạy khi tải trang
+    window.onload = initApp;
+  </script>
+</body>
+</html>

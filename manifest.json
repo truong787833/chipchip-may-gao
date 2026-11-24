@@ -1,0 +1,17 @@
+{
+  "name": "ChipChip Mây & Gạo",
+  "short_name": "ChipChip",
+  "description": "Sổ Quản Lý Đơn Hàng Kẹo Chip Chip Mây & Gạo",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#F43F5E",
+  "icons": [
+    {
+      "src": "assets/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

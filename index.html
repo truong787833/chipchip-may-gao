@@ -3463,9 +3463,12 @@ function switchBottomTab(tab) {
         () => {
           showOtaProgress(true, 'Đang tải bản cập nhật từ GitHub...', 20);
           if (window.ChipChipBridge) {
+            const dlUrl = (remote.update_url && remote.update_url.trim().length > 0)
+              ? remote.update_url.trim()
+              : ('https://github.com/truong787833/chipchip-may-gao/releases/download/v' + (remote.version || '1.0.2') + '/latest_ota_package.zip');
             window.ChipChipBridge.postMessage(JSON.stringify({
               action: 'download_and_apply_ota',
-              url: remote.update_url
+              url: dlUrl
             }));
           }
         }
@@ -3663,10 +3666,14 @@ function switchBottomTab(tab) {
 
     // Cập nhật online
     function triggerCheckRemoteOta() {
-      showToast('Đang kiểm tra máy chủ cập nhật...');
-      setTimeout(() => {
-        showToast('Bạn đang sử dụng phiên bản mới nhất!');
-      }, 700);
+      showToast('Đang kết nối máy chủ cập nhật...');
+      if (window.ChipChipBridge) {
+        window.ChipChipBridge.postMessage(JSON.stringify({ action: 'smart_ota_update' }));
+      } else {
+        setTimeout(() => {
+          showToast('Phiên bản Web đang ở bản mới nhất!');
+        }, 700);
+      }
     }
 
     // Khôi phục về bản gốc ban đầu

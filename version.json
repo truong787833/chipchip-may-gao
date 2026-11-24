@@ -7,7 +7,7 @@
   "latest_version": "1.0.2",
   "latest_build": 104,
   "has_update": false,
-  "update_url": "",
+  "update_url": "https://github.com/truong787833/chipchip-may-gao/releases/download/v1.0.2/latest_ota_package.zip",
   "changelog": [
     "Thử nghiệm cập nhật OTA Siêu Tốc 1 giây thành công 100%",
     "Tinh gọn giao diện: Chỉ còn 1 nút [Cập Nhật OTA Siêu Tốc] duy nhất, xóa bỏ [Quét Gói Máy]",

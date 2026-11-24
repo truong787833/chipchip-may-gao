@@ -260,6 +260,15 @@
     * Đi kèm huy hiệu xanh lá nổi bật `⚡ v1.0.2` ngay cạnh logo tiêu đề để người dùng nhận biết ngay khi nạp thành công.
     * Gói OTA: `latest_ota_package.zip` (~2.3 MB) sẵn sàng nạp thử nghiệm 1 giây mà không mất bất kỳ dữ liệu đơn nào.
 
+- **2026-11-24 (Phiên 21 - Xuất Bản Gói APK Release v1.0.2 Tích Hợp Sẵn Động Cơ OTA GitHub & Chốt Chế Độ 100% Cập Nhật Tự Động):**
+  - **Yêu cầu của người dùng:** "Gửi tôi 1 lần này file APK đã tích hợp sẵn phiên bản 1.0.2 và lần sau chỉ cần bấm cập nhật là tải và cài tự động dùng luôn".
+  - **Hoàn thành triển khai:**
+    1. Đã tạo và cấu hình kho GitHub: `https://github.com/truong787833/chipchip-may-gao`.
+    2. Đã phát hành Release `v1.0.2` (Build 104) trên GitHub đính kèm file `latest_ota_package.zip` và `update_v1.0.2.zip`.
+    3. Tích hợp trực tiếp engine kết nối GitHub trong app qua `HttpClient` (tự động theo dõi chuyển hướng 302, hiển thị thanh tiến trình download real-time, giải nén và tải lại WebView trong 1-2 giây).
+    4. Biên dịch và ký số thành công file APK chính thức: `ChipChip_MayVaGao_v1.0.apk` (48.2 MB) tích hợp sẵn `v1.0.2` (Build 104).
+    5. Từ lần này trở đi: Người dùng KHÔNG BAO GIỜ cần cài lại file APK. Mỗi khi có bản vá mới, chỉ cần ấn nút `[⚡ CẬP NHẬT OTA SIÊU TỐC]`, app sẽ tự động tải từ GitHub và cập nhật ngay lập tức mà vẫn giữ nguyên vẹn 100% dữ liệu.
+
 ## 3. Danh Sách Tính Năng Cốt Lõi (Đã Hoàn Thành & Đang Ổn Định)
 - [x] Tạo `PROJECT_MEMORY.md` theo quy tắc hệ thống.
 - [x] Tích hợp Động Cơ Cập Nhật OTA Siêu Tốc (1-2 giây), loại bỏ tải APK và cảnh báo Play Protect.

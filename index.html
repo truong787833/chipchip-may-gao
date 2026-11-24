@@ -3453,6 +3453,30 @@ function switchBottomTab(tab) {
       }
     }
 
+    // Khi có bản cập nhật mới trên GitHub
+    window.onRemoteOtaAvailable = function(remote) {
+      if (!remote) return;
+      const notes = Array.isArray(remote.changelog) ? remote.changelog.map(n => `• ${escapeHtml(n)}`).join('<br>') : '';
+      showConfirmModal(
+        '⚡ Cập Nhật OTA Từ GitHub',
+        `Phát hiện phiên bản mới <strong>v${remote.version}</strong> (Build ${remote.build_number}) trên GitHub!<br><br><div class="text-left bg-slate-50 p-2 rounded-xl text-[11px] text-slate-600 max-h-28 overflow-y-auto leading-relaxed">${notes}</div><br>Bạn có muốn nâng cấp ngay bây giờ không? Ứng dụng sẽ cập nhật trong 1-2 giây và bảo toàn 100% dữ liệu.`,
+        () => {
+          showOtaProgress(true, 'Đang tải bản cập nhật từ GitHub...', 20);
+          if (window.ChipChipBridge) {
+            window.ChipChipBridge.postMessage(JSON.stringify({
+              action: 'download_and_apply_ota',
+              url: remote.update_url
+            }));
+          }
+        }
+      );
+    };
+
+    // Khi đã ở phiên bản mới nhất
+    window.onRemoteOtaUpToDate = function() {
+      showToast('🎉 Bạn đang sử dụng phiên bản mới nhất!');
+    };
+
     // Khi tìm thấy gói OTA trong thư mục Download của máy
     window.onSmartOtaFound = function(pkg) {
       if (!pkg) return;

@@ -1,18 +1,17 @@
 {
-  "version": "1.0.2",
-  "build_number": 104,
+  "version": "1.0.3",
+  "build_number": 105,
   "release_date": "2026-11-24",
   "channel": "stable",
   "app_name": "ChipChip Mây & Gạo",
-  "latest_version": "1.0.2",
-  "latest_build": 104,
+  "latest_version": "1.0.3",
+  "latest_build": 105,
   "has_update": false,
-  "update_url": "https://github.com/truong787833/chipchip-may-gao/releases/download/v1.0.2/latest_ota_package.zip",
+  "update_url": "https://github.com/truong787833/chipchip-may-gao/releases/download/v1.0.3/latest_ota_package.zip",
   "changelog": [
-    "Thử nghiệm cập nhật OTA Siêu Tốc 1 giây thành công 100%",
-    "Tinh gọn giao diện: Chỉ còn 1 nút [Cập Nhật OTA Siêu Tốc] duy nhất, xóa bỏ [Quét Gói Máy]",
-    "Tự động tìm kiếm gói OTA trong thư mục Download để nâng cấp tức thì",
-    "Bảo toàn 100% dữ liệu đơn hàng và khách nợ, không bao giờ mất thông tin",
-    "Huy hiệu nhận diện phiên bản mới v1.0.2 OTA trực quan trên thanh tiêu đề"
+    "Lưu trữ dữ liệu tức thì tại thời điểm thao tác (thêm, xóa, chỉnh sửa đơn hàng)",
+    "Khắc phục triệt để lỗi thoát ra vào lại app bị nhảy về các mục cố định ban đầu",
+    "Cơ chế bảo toàn dữ liệu đa tầng (LocalStorage + Cookies xuyên cổng + Bộ nhớ máy)",
+    "Nâng cấp xác nhận xóa toàn bộ đơn hàng sang giao diện chuyên nghiệp"
   ]
 }

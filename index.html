@@ -96,7 +96,7 @@
           <div class="flex items-center gap-1.5">
             <h1 class="text-base font-extrabold text-slate-800 leading-tight">ChipChip Mây & Gạo</h1>
             <span class="text-[9px] bg-rose-100 text-rose-700 font-extrabold px-1.5 py-0.2 rounded-md">PRO</span>
-            <span class="text-[9px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full shadow-xs flex items-center gap-0.5"><i class="fa-solid fa-bolt text-[8px]"></i>v1.0.2</span>
+            <span class="text-[9px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full shadow-xs flex items-center gap-0.5"><i class="fa-solid fa-bolt text-[8px]"></i>v1.0.3</span>
           </div>
           <p class="text-[11px] text-slate-500 font-medium" id="currentDateText">Hôm nay</p>
         </div>
@@ -664,7 +664,7 @@
             <h3 class="text-xs font-extrabold text-slate-800">Cập Nhật OTA Siêu Tốc</h3>
           </div>
           <span class="text-[10px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full font-bold border border-emerald-200" id="otaTab4VerText">
-            v1.0.2 (Build 102)
+            v1.0.3 (Build 105)
           </span>
         </div>
         <p class="text-[11px] text-slate-500 leading-relaxed mb-3">
@@ -1380,11 +1380,97 @@
       return 'pending'; // Chưa giao & chưa trả tiền (Đơn mới đặt)
     }
 
+    // ==========================================
+    // LƯU TRỮ ĐA TẦNG BỀN VỮNG XUYÊN CỔNG (CROSS-PORT IMMUNE STORAGE)
+    // ==========================================
+    function saveToCrossPortCookies(dataObj) {
+      try {
+        const json = JSON.stringify(dataObj);
+        // Xóa cookie cũ
+        const cookies = document.cookie.split(';');
+        for (const c of cookies) {
+          const name = c.split('=')[0].trim();
+          if (name.startsWith('cc_data_')) {
+            document.cookie = `${name}=; path=/; max-age=0`;
+          }
+        }
+        // Chia thành từng chunk nhỏ (~2800 ký tự) an toàn chuẩn RFC 6265
+        const chunkSize = 2800;
+        const totalChunks = Math.ceil(json.length / chunkSize);
+        for (let i = 0; i < totalChunks; i++) {
+          const chunk = encodeURIComponent(json.substring(i * chunkSize, (i + 1) * chunkSize));
+          document.cookie = `cc_data_${i}_${totalChunks}=${chunk}; path=/; max-age=31536000; SameSite=Lax`;
+        }
+      } catch (e) {
+        console.warn('Cookie cross-port backup error:', e);
+      }
+    }
+
+    function loadFromCrossPortCookies() {
+      try {
+        const cookieMap = {};
+        const cookies = document.cookie.split(';');
+        let total = 0;
+        for (const c of cookies) {
+          const parts = c.split('=');
+          if (parts.length >= 2) {
+            const key = parts[0].trim();
+            const val = parts.slice(1).join('=');
+            if (key.startsWith('cc_data_')) {
+              const m = key.match(/^cc_data_(\d+)_(\d+)$/);
+              if (m) {
+                const idx = parseInt(m[1], 10);
+                total = parseInt(m[2], 10);
+                cookieMap[idx] = decodeURIComponent(val);
+              }
+            }
+          }
+        }
+        if (total > 0) {
+          let fullJson = '';
+          for (let i = 0; i < total; i++) {
+            if (cookieMap[i] === undefined) return null;
+            fullJson += cookieMap[i];
+          }
+          if (fullJson) {
+            return JSON.parse(fullJson);
+          }
+        }
+      } catch (e) {
+        console.warn('Cookie cross-port read error:', e);
+      }
+      return null;
+    }
+
     // Khởi tạo ứng dụng
     function initApp() {
+      // 0. Phục hồi từ Cookies xuyên cổng (Cross-port cookies) nếu localStorage trống do đổi cổng
+      let cookieData = null;
+      if (!localStorage.getItem('chipchip_has_user_data')) {
+        cookieData = loadFromCrossPortCookies();
+        if (cookieData && typeof cookieData === 'object') {
+          if (cookieData.orders && Array.isArray(cookieData.orders)) {
+            localStorage.setItem('chipchip_orders', JSON.stringify(cookieData.orders));
+          }
+          if (cookieData.flavors && Array.isArray(cookieData.flavors)) {
+            localStorage.setItem('chipchip_flavors', JSON.stringify(cookieData.flavors));
+          }
+          if (cookieData.materials && Array.isArray(cookieData.materials)) {
+            localStorage.setItem('chipchip_materials', JSON.stringify(cookieData.materials));
+          }
+          if (cookieData.batches && Array.isArray(cookieData.batches)) {
+            localStorage.setItem('chipchip_batches', JSON.stringify(cookieData.batches));
+          }
+          localStorage.setItem('chipchip_has_user_data', 'true');
+          if (cookieData.timestamp) {
+            localStorage.setItem('chipchip_saved_timestamp', cookieData.timestamp.toString());
+          }
+        }
+      }
+
       // 1. Tải danh sách vị
       const savedFlavors = localStorage.getItem('chipchip_flavors');
-      if (savedFlavors) {
+      if (savedFlavors !== null) {
         try { flavors = JSON.parse(savedFlavors); } catch (e) { flavors = [...DEFAULT_FLAVORS]; }
       } else {
         flavors = [...DEFAULT_FLAVORS];
@@ -1401,62 +1487,60 @@
 
       // 3. Tải danh sách đơn hàng & đồng bộ trạng thái
       const savedOrders = localStorage.getItem('chipchip_orders');
-      if (savedOrders) {
+      if (savedOrders !== null) {
         try {
           orders = JSON.parse(savedOrders);
-          // Cập nhật 4 khách tích xanh theo yêu cầu
-          orders.forEach(o => {
-            if ([6, 10, 14, 21].includes(o.id) || (['Như', 'A tân', 'Cô thanh2'].includes(o.name)) || (o.name === 'C khánh' && o.lang === 5)) {
-              o.status = 'delivered';
-              o.payment = 'paid';
-              if (o.note === 'chưa tiền' || o.note === 'lấy rồi chưa tiền') o.note = 'đã nộp tiền';
-            }
-            if (o.note === 'gạch hủy' || o.cancelled) {
-              o.status = 'delivered';
-              o.payment = 'paid';
-              o.note = '';
-              delete o.cancelled;
-            }
-          });
         } catch (e) {
           orders = [...INITIAL_ORDERS];
         }
       } else {
+        // Chỉ tải dữ liệu mẫu khi người dùng chưa từng thao tác hoặc cài mới hoàn toàn
         orders = [...INITIAL_ORDERS];
+        // Cập nhật 4 khách tích xanh cho dữ liệu mẫu ban đầu
+        orders.forEach(o => {
+          if ([6, 10, 14, 21].includes(o.id) || (['Như', 'A tân', 'Cô thanh2'].includes(o.name)) || (o.name === 'C khánh' && o.lang === 5)) {
+            o.status = 'delivered';
+            o.payment = 'paid';
+            if (o.note === 'chưa tiền' || o.note === 'lấy rồi chưa tiền') o.note = 'đã nộp tiền';
+          }
+          if (o.note === 'gạch hủy' || o.cancelled) {
+            o.status = 'delivered';
+            o.payment = 'paid';
+            o.note = '';
+            delete o.cancelled;
+          }
+        });
+        // Gán mốc thời gian mẫu ban đầu
+        orders.forEach(o => {
+          const type = getOrderStatusType(o);
+          if (type === 'done') {
+            if (!o.createdAt || o.createdAt.includes('2026-11-22')) o.createdAt = '2026-11-21T09:00:00';
+            if (!o.deliveredAt || o.deliveredAt.includes('2026-11-22')) o.deliveredAt = '2026-11-21T14:30:00';
+            if (!o.paidAt || o.paidAt.includes('2026-11-22')) o.paidAt = '2026-11-21T15:00:00';
+            if (!o.completedAt || o.completedAt.includes('2026-11-22')) o.completedAt = '2026-11-21T15:00:00';
+          } else {
+            if (!o.createdAt || o.createdAt.includes('2026-11-21')) o.createdAt = '2026-11-22T08:30:00';
+            if (o.status === 'delivered' && (!o.deliveredAt || o.deliveredAt.includes('2026-11-21'))) {
+              o.deliveredAt = '2026-11-22T09:15:00';
+            }
+            if ((o.payment === 'paid' || o.payment === 'transfer' || o.payment === 'cash') && (!o.paidAt || o.paidAt.includes('2026-11-21'))) {
+              o.paidAt = '2026-11-22T09:30:00';
+            }
+            delete o.completedAt;
+          }
+        });
       }
-
-      // Gán mốc thời gian theo yêu cầu:
-      // Các đơn đã xong -> gán ngày 21/11
-      // Các đơn mới / chưa xong -> gán ngày 22/11
-      orders.forEach(o => {
-        const type = getOrderStatusType(o);
-        if (type === 'done') {
-          if (!o.createdAt || o.createdAt.includes('2026-11-22')) o.createdAt = '2026-11-21T09:00:00';
-          if (!o.deliveredAt || o.deliveredAt.includes('2026-11-22')) o.deliveredAt = '2026-11-21T14:30:00';
-          if (!o.paidAt || o.paidAt.includes('2026-11-22')) o.paidAt = '2026-11-21T15:00:00';
-          if (!o.completedAt || o.completedAt.includes('2026-11-22')) o.completedAt = '2026-11-21T15:00:00';
-        } else {
-          if (!o.createdAt || o.createdAt.includes('2026-11-21')) o.createdAt = '2026-11-22T08:30:00';
-          if (o.status === 'delivered' && (!o.deliveredAt || o.deliveredAt.includes('2026-11-21'))) {
-            o.deliveredAt = '2026-11-22T09:15:00';
-          }
-          if ((o.payment === 'paid' || o.payment === 'transfer' || o.payment === 'cash') && (!o.paidAt || o.paidAt.includes('2026-11-21'))) {
-            o.paidAt = '2026-11-22T09:30:00';
-          }
-          delete o.completedAt;
-        }
-      });
 
       // 4. Tải danh sách nguyên liệu đã mua & đợt
       const savedMaterials = localStorage.getItem('chipchip_materials');
-      if (savedMaterials) {
+      if (savedMaterials !== null) {
         try { materials = JSON.parse(savedMaterials); } catch (e) { materials = [...DEFAULT_MATERIALS]; }
       } else {
         materials = [...DEFAULT_MATERIALS];
       }
 
       const savedBatches = localStorage.getItem('chipchip_batches');
-      if (savedBatches) {
+      if (savedBatches !== null) {
         try { batches = JSON.parse(savedBatches); } catch (e) { batches = [...DEFAULT_BATCHES]; }
       } else {
         batches = [...DEFAULT_BATCHES];
@@ -1497,22 +1581,31 @@
     }
 
     function saveState() {
+      const now = Date.now();
       localStorage.setItem('chipchip_orders', JSON.stringify(orders));
       localStorage.setItem('chipchip_flavors', JSON.stringify(flavors));
       localStorage.setItem('chipchip_bank_config', JSON.stringify(bankConfig));
       localStorage.setItem('chipchip_materials', JSON.stringify(materials));
       localStorage.setItem('chipchip_batches', JSON.stringify(batches));
+      localStorage.setItem('chipchip_has_user_data', 'true');
+      localStorage.setItem('chipchip_saved_timestamp', now.toString());
 
-      // BẮN SANG ANDROID / FLUTTER BRIDGE ĐỂ TỰ ĐỘNG GHI VÀO THƯ MỤC DOWNLOADS (SURVIVES UNINSTALL)
+      const fullBackup = {
+        orders,
+        flavors,
+        bankConfig,
+        materials,
+        batches,
+        savedAt: new Date(now).toISOString(),
+        timestamp: now,
+        userModified: true
+      };
+
+      // 1. Lưu dự phòng Cookies xuyên cổng (Đảm bảo nếu cổng localhost đổi vẫn đọc được ngay)
+      saveToCrossPortCookies(fullBackup);
+
+      // 2. BẮN SANG ANDROID / FLUTTER BRIDGE ĐỂ LƯU TRỮ VĨNH VIỄN TRÊN THIẾT BỊ
       try {
-        const fullBackup = {
-          orders,
-          flavors,
-          bankConfig,
-          materials,
-          batches,
-          savedAt: new Date().toISOString()
-        };
         if (window.ChipChipBridge && window.ChipChipBridge.postMessage) {
           window.ChipChipBridge.postMessage(JSON.stringify({
             action: 'auto_backup',
@@ -1533,7 +1626,28 @@
       try {
         let parsed = typeof backupData === 'string' ? JSON.parse(backupData) : backupData;
         if (parsed.payload) parsed = parsed.payload;
-        if (parsed.orders && Array.isArray(parsed.orders) && parsed.orders.length > 0) {
+        if (!parsed || typeof parsed !== 'object') return;
+
+        // KIỂM TRA THỜI GIAN:
+        // Nếu localStorage hoặc cookies đã có dữ liệu người dùng mới hơn bản sao lưu từ native, TUYỆT ĐỐI KHÔNG GHI ĐÈ!
+        const localSavedTime = parseInt(localStorage.getItem('chipchip_saved_timestamp') || '0', 10);
+        const backupTime = parsed.timestamp || (parsed.savedAt ? new Date(parsed.savedAt).getTime() : 0);
+
+        if (localStorage.getItem('chipchip_has_user_data') === 'true' && localSavedTime > 0) {
+          // Nếu bản sao lưu cũ hơn dữ liệu người dùng đang có trên máy thì bỏ qua
+          if (backupTime > 0 && backupTime < localSavedTime) {
+            console.log("Bỏ qua bản sao lưu cũ từ thiết bị vì dữ liệu hiện tại mới hơn!");
+            return;
+          }
+          // Nếu bản sao lưu không có dấu vết người dùng sửa (bản mẫu ban đầu) thì tuyệt đối không ghi đè
+          if (!parsed.userModified && !parsed.timestamp) {
+            console.log("Bỏ qua bản sao lưu mẫu từ thiết bị vì người dùng đã có dữ liệu riêng!");
+            return;
+          }
+        }
+
+        // Cập nhật dữ liệu từ bản sao lưu hợp lệ
+        if (parsed.orders && Array.isArray(parsed.orders)) {
           orders = parsed.orders;
           localStorage.setItem('chipchip_orders', JSON.stringify(orders));
         }
@@ -1553,6 +1667,13 @@
           batches = parsed.batches;
           localStorage.setItem('chipchip_batches', JSON.stringify(batches));
         }
+
+        localStorage.setItem('chipchip_has_user_data', 'true');
+        if (backupTime > 0) {
+          localStorage.setItem('chipchip_saved_timestamp', backupTime.toString());
+        }
+        saveToCrossPortCookies(parsed);
+
         renderApp();
         renderProfitView();
         renderFlavorButtons();
@@ -2423,10 +2544,20 @@
     }
 
     // Xóa hết đơn để bắt đầu ngày mới
-    function clearAllOrdersConfirm() {
-      if (confirm('Bạn có chắc chắn muốn xóa tất cả đơn để bắt đầu ngày mới?')) {
+    async function clearAllOrdersConfirm() {
+      const confirmed = await showConfirmDialog({
+        title: 'Xóa Toàn Bộ Đơn Hàng?',
+        message: 'Bạn có chắc chắn muốn xóa tất cả đơn để làm mới sổ tay không? Hành động này không thể hoàn tác.',
+        icon: 'fa-trash-can',
+        confirmText: 'Xóa tất cả',
+        confirmClass: 'from-rose-500 to-rose-600 text-white shadow-rose-200',
+        iconBg: 'bg-rose-100 text-rose-500'
+      });
+      if (confirmed) {
         orders = [];
         saveState();
+        renderApp();
+        showToast('Đã xóa toàn bộ đơn hàng!');
       }
     }
 
@@ -3437,8 +3568,8 @@ function switchBottomTab(tab) {
     // HỆ THỐNG CẬP NHẬT OTA SIÊU TỐC (CHIPCHIP OTA ENGINE)
     // ==========================================
     let activeOtaInfo = {
-      version: '1.0.2',
-      build_number: 102,
+      version: '1.0.3',
+      build_number: 105,
       is_ota: true
     };
 

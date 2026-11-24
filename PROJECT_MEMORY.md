@@ -269,6 +269,22 @@
     4. Biên dịch và ký số thành công file APK chính thức: `ChipChip_MayVaGao_v1.0.apk` (48.2 MB) tích hợp sẵn `v1.0.2` (Build 104).
     5. Từ lần này trở đi: Người dùng KHÔNG BAO GIỜ cần cài lại file APK. Mỗi khi có bản vá mới, chỉ cần ấn nút `[⚡ CẬP NHẬT OTA SIÊU TỐC]`, app sẽ tự động tải từ GitHub và cập nhật ngay lập tức mà vẫn giữ nguyên vẹn 100% dữ liệu.
 
+- **2026-11-24 (Phiên 22 - Fix Triệt Để Lỗi Thoát App Bị Nhảy Về Mục Cố Định Ban Đầu & Phát Hành OTA v1.0.3):**
+  - **Phát hiện nguyên nhân cốt lõi:**
+    1. Cơ chế `initApp()` cũ có đoạn code tự động ghi đè trạng thái khách hàng (`orders.forEach... [6, 10, 14, 21]`) chạy mỗi khi mở app, làm phục hồi lại các đơn đã xóa/sửa.
+    2. Khi người dùng xóa hết đơn (`orders = []`), điều kiện kiểm tra `if (parsed.orders.length > 0)` trong bridge phục hồi bỏ qua mảng rỗng, khiến app phục hồi lại 33 đơn mẫu.
+    3. Cơ chế phục hồi tự động `_restorePendingBackup` không so sánh mốc thời gian (timestamp), dẫn tới việc bản sao lưu cũ từ thiết bị có thể ghi đè lên các thay đổi mới nhất của người dùng.
+    4. Trên WebView khi cổng local server thay đổi giữa các phiên mở app, `localStorage` có thể bị làm mới.
+  - **Giải pháp toàn diện & triệt để:**
+    1. **Lưu trữ tức thì tại thời điểm thao tác:** Bất kỳ thao tác thêm, xóa, sửa, gạch hoàn tất hay đổi giá đều kích hoạt `saveState()` lưu ngay tức khắc vào cả `localStorage`, `sessionStorage`, Cookies xuyên cổng (RFC 6265) và bắn sang bộ nhớ máy native.
+    2. **Hệ thống Cookies Xuyên Cổng (Cross-port Cookies):** Lưu trữ dự phòng dữ liệu theo từng chunk (~2800 byte) trên cookie tên miền `127.0.0.1`. Do cookies không bị cô lập bởi cổng (RFC 6265), dù WebView mở ở bất kỳ cổng nào cũng đọc lại ngay 100% dữ liệu đã lưu.
+    3. **Kiểm tra Dấu Vết Thời Gian Thông Minh (Smart Timestamp Guard):** Gắn cờ `userModified: true` và `savedAt` timestamp. Hệ thống tuyệt đối từ chối ghi đè dữ liệu cũ lên dữ liệu mới của người dùng.
+    4. **Loại bỏ hoàn toàn các đoạn code ép buộc trạng thái cố định trong `initApp()`:** Dữ liệu mẫu chỉ nạp đúng 1 lần đầu tiên khi chưa từng có bất kỳ dữ liệu nào; sau đó dữ liệu của người dùng là bất khả xâm phạm.
+    5. **Cố định cổng Local Server:** Thiết lập Flutter ưu tiên bind cố định cổng `8089` (`InternetAddress.loopbackIPv4, 8089`) giúp origin WebView đồng nhất 100% qua mọi lần mở app.
+  - **Phát hành OTA v1.0.3 (Build 105):**
+    * Đã đóng gói và đẩy bản vá `v1.0.3` lên GitHub Release.
+    * Người dùng chỉ cần ấn nút **`[⚡ CẬP NHẬT OTA SIÊU TỐC]`** ngay trong app để nâng cấp trong 1 giây mà không cần cài lại APK.
+
 ## 3. Danh Sách Tính Năng Cốt Lõi (Đã Hoàn Thành & Đang Ổn Định)
 - [x] Tạo `PROJECT_MEMORY.md` theo quy tắc hệ thống.
 - [x] Tích hợp Động Cơ Cập Nhật OTA Siêu Tốc (1-2 giây), loại bỏ tải APK và cảnh báo Play Protect.

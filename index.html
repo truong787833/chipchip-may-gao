@@ -96,7 +96,7 @@
           <div class="flex items-center gap-1.5">
             <h1 class="text-base font-extrabold text-slate-800 leading-tight">ChipChip Mây & Gạo</h1>
             <span class="text-[9px] bg-rose-100 text-rose-700 font-extrabold px-1.5 py-0.2 rounded-md">PRO</span>
-            <span class="text-[9px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full shadow-xs flex items-center gap-0.5"><i class="fa-solid fa-bolt text-[8px]"></i>v1.0.5</span>
+            <span class="text-[9px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full shadow-xs flex items-center gap-0.5"><i class="fa-solid fa-bolt text-[8px]"></i>v1.0.6</span>
           </div>
           <p class="text-[11px] text-slate-500 font-medium" id="currentDateText">Hôm nay</p>
         </div>
@@ -665,7 +665,7 @@
             <h3 class="text-xs font-extrabold text-slate-800">Cập Nhật OTA Siêu Tốc</h3>
           </div>
           <span class="text-[10px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full font-bold border border-emerald-200" id="otaTab4VerText">
-            v1.0.5 (Build 107)
+            v1.0.6 (Build 108)
           </span>
         </div>
         <p class="text-[11px] text-slate-500 leading-relaxed mb-3">
@@ -2999,6 +2999,27 @@
       }
     }
 
+    // Wrapper tương thích cho hộp thoại xác nhận OTA (hỗ trợ nội dung HTML)
+    function showConfirmModal(title, htmlMessage, onConfirm) {
+      document.getElementById('confirmTitle').innerText = title;
+      document.getElementById('confirmMessage').innerHTML = htmlMessage;
+
+      const iconWrapper = document.getElementById('confirmIconWrapper');
+      iconWrapper.className = 'w-14 h-14 rounded-full mx-auto flex items-center justify-center text-2xl shadow-inner bg-amber-100 text-amber-500';
+      document.getElementById('confirmIcon').className = 'fa-solid fa-bolt';
+
+      const okBtn = document.getElementById('confirmOkBtn');
+      okBtn.innerText = 'Cập nhật ngay';
+      okBtn.className = 'btn-tactile flex-1 py-2.5 font-extrabold rounded-xl text-xs shadow-md bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-rose-200';
+
+      confirmResolver = function(choice) {
+        if (choice && typeof onConfirm === 'function') {
+          onConfirm();
+        }
+      };
+      document.getElementById('confirmModal').classList.remove('hidden');
+    }
+
     // ==========================================
     // HỘP THOẠI NHẬP LIỆU CHUYÊN NGHIỆP (THAY THẾ WINDOW.PROMPT)
     // ==========================================
@@ -3673,8 +3694,8 @@ function switchBottomTab(tab) {
     // HỆ THỐNG CẬP NHẬT OTA SIÊU TỐC (CHIPCHIP OTA ENGINE)
     // ==========================================
     let activeOtaInfo = {
-      version: '1.0.5',
-      build_number: 107,
+      version: '1.0.6',
+      build_number: 108,
       is_ota: true
     };
 
@@ -3774,16 +3795,16 @@ function switchBottomTab(tab) {
     window.onOtaInfoReceived = function(info) {
       if (!info) return;
       const incomingBuild = Number(info.build_number || 0);
-      const localBuild = Number(activeOtaInfo.build_number || 107);
+      const localBuild = Number(activeOtaInfo.build_number || 108);
       const effectiveInfo = incomingBuild >= localBuild ? info : activeOtaInfo;
       activeOtaInfo = effectiveInfo;
-      const txt = `Phiên bản: v${effectiveInfo.version || '1.0.5'} (Build ${effectiveInfo.build_number || 107})${effectiveInfo.is_ota ? ' • OTA' : ''}`;
+      const txt = `Phiên bản: v${effectiveInfo.version || '1.0.6'} (Build ${effectiveInfo.build_number || 108})${effectiveInfo.is_ota ? ' • OTA' : ''}`;
       const el1 = document.getElementById('otaCurrentVerText');
       if (el1) el1.textContent = txt;
       const el2 = document.getElementById('otaModalSubVer');
       if (el2) el2.textContent = txt;
       const el3 = document.getElementById('otaTab4VerText');
-      if (el3) el3.textContent = `v${effectiveInfo.version || '1.0.5'} (Build ${effectiveInfo.build_number || 107})`;
+      if (el3) el3.textContent = `v${effectiveInfo.version || '1.0.6'} (Build ${effectiveInfo.build_number || 108})`;
     };
 
     // Quét file OTA trong thư mục Download
@@ -3932,7 +3953,11 @@ function switchBottomTab(tab) {
 
     // Hiển thị tiến trình OTA
     function showOtaProgress(show, status, percent) {
+      const modal = document.getElementById('otaModal');
       const box = document.getElementById('otaProgressBox');
+      if (show && modal && modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+      }
       if (!box) return;
       if (show) {
         box.classList.remove('hidden');

@@ -293,6 +293,13 @@
     * Nâng `z-index` của `confirmModal` & `promptModal` lên `z-[90]` và mở rộng ô nhập liệu `promptInput` (`py-3 px-3.5 text-sm`) giúp gõ thoải mái trên điện thoại.
     * Đóng gói và phát hành OTA **v1.0.4 (Build 106)** lên GitHub Release & CDN jsDelivr (chỉ phát hành gói OTA theo đúng quy tắc).
 
+- **2026-11-25 (Phiên 24 - Thay thế Dropdown Chọn Đợt bằng Thẻ Nút Bấm 1-Chạm & Đồng bộ hiển thị v1.0.5):**
+  - **Vấn đề:** Ô chọn "Gán vào Đợt làm kẹo" dùng thẻ `<select>` khiến Android hiện popup chọn radio tròn thô cứng và không có nút xóa các đợt thêm nhầm (`1`, `2`). Đồng thời nhãn OTA trong tab Tổng Kết đôi khi hiển thị bản cũ từ `active_ota_version.json` của gói trước.
+  - **Giải pháp:**
+    * Thay `<select>` bằng danh sách thẻ nút bấm trực quan (`#materialBatchPills`) 1-chạm màu xanh ngọc, có nút `×` nhỏ để xóa các đợt tạo nhầm kèm Modal xác nhận đẹp mắt.
+    * Cập nhật `onOtaInfoReceived()` luôn ưu tiên hiển thị phiên bản cao nhất (`v1.0.5 Build 107`) đồng bộ từ trên xuống dưới.
+    * Đóng gói & phát hành **OTA v1.0.5 (Build 107)** lên GitHub Release & Tag CDN để người dùng test cập nhật trực tiếp 1-chạm từ bản 1.0.4 trên điện thoại.
+
 ## 3. Danh Sách Tính Năng Cốt Lõi (Đã Hoàn Thành & Đang Ổn Định)
 - [x] Tạo `PROJECT_MEMORY.md` theo quy tắc hệ thống.
 - [x] Tích hợp Động Cơ Cập Nhật OTA Siêu Tốc (1-2 giây), loại bỏ tải APK và cảnh báo Play Protect.

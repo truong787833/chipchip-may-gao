@@ -96,7 +96,7 @@
           <div class="flex items-center gap-1.5">
             <h1 class="text-base font-extrabold text-slate-800 leading-tight">ChipChip Mây & Gạo</h1>
             <span class="text-[9px] bg-rose-100 text-rose-700 font-extrabold px-1.5 py-0.2 rounded-md">PRO</span>
-            <span class="text-[9px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full shadow-xs flex items-center gap-0.5"><i class="fa-solid fa-bolt text-[8px]"></i>v1.0.4</span>
+            <span class="text-[9px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full shadow-xs flex items-center gap-0.5"><i class="fa-solid fa-bolt text-[8px]"></i>v1.0.5</span>
           </div>
           <p class="text-[11px] text-slate-500 font-medium" id="currentDateText">Hôm nay</p>
         </div>
@@ -523,17 +523,18 @@
         </div>
       </div>
 
-      <!-- Thuộc Đợt nào -->
-      <div class="flex items-center justify-between gap-2">
-        <div class="flex-1">
-          <label class="text-[11px] font-bold text-slate-600 block mb-1">Gán vào Đợt làm kẹo:</label>
-          <select id="inputMaterialBatch" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500">
-            <!-- Rendered dynamically -->
-          </select>
+      <!-- Thuộc Đợt nào (Nút chọn trực quan thay thế select mặc định) -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-[11px] font-bold text-slate-600">Gán vào Đợt làm kẹo:</label>
+          <button type="button" onclick="promptAddNewBatch()" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold rounded-lg text-[11px] flex items-center gap-1 transition active:scale-95">
+            <i class="fa-solid fa-plus text-[10px]"></i> Đợt mới
+          </button>
         </div>
-        <button type="button" onclick="promptAddNewBatch()" class="mt-4 px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs whitespace-nowrap">
-          + Đợt mới
-        </button>
+        <input type="hidden" id="inputMaterialBatch" value="Đợt 1 (12.6kg)">
+        <div id="materialBatchPills" class="flex flex-wrap gap-1.5">
+          <!-- Rendered dynamically -->
+        </div>
       </div>
 
       <!-- Nút Thêm -->
@@ -664,7 +665,7 @@
             <h3 class="text-xs font-extrabold text-slate-800">Cập Nhật OTA Siêu Tốc</h3>
           </div>
           <span class="text-[10px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full font-bold border border-emerald-200" id="otaTab4VerText">
-            v1.0.4 (Build 106)
+            v1.0.5 (Build 107)
           </span>
         </div>
         <p class="text-[11px] text-slate-500 leading-relaxed mb-3">
@@ -3391,21 +3392,82 @@ function switchBottomTab(tab) {
         if (!batches.includes(clean)) {
           batches.push(clean);
           selectedProfitBatch = clean;
+          const inp = document.getElementById('inputMaterialBatch');
+          if (inp) inp.value = clean;
           saveState();
           renderBatchSelectOptions();
           renderProfitFilterControls();
           renderProfitView();
           showToast(`Đã thêm đợt "${clean}" thành công!`);
         } else {
-          showToast(`Đợt "${clean}" đã tồn tại!`);
+          selectMaterialBatch(clean);
+          showToast(`Đã chọn đợt "${clean}"!`);
         }
       }
     }
 
+    function selectMaterialBatch(batchName) {
+      const inp = document.getElementById('inputMaterialBatch');
+      if (inp) inp.value = batchName;
+      renderBatchSelectOptions();
+    }
+
+    async function deleteBatchItem(e, batchName) {
+      e.stopPropagation();
+      if (batches.length <= 1) {
+        showToast('Phải giữ ít nhất 1 đợt làm kẹo!');
+        return;
+      }
+      const confirmed = await showConfirmDialog({
+        title: 'Xóa Đợt Làm Kẹo',
+        message: `Bạn có chắc muốn xóa đợt "${batchName}" không?`,
+        icon: 'fa-trash-can',
+        confirmText: 'Xóa đợt này'
+      });
+      if (confirmed) {
+        batches = batches.filter(b => b !== batchName);
+        const inp = document.getElementById('inputMaterialBatch');
+        if (inp && inp.value === batchName) {
+          inp.value = batches[0] || 'Đợt 1 (12.6kg)';
+        }
+        if (selectedProfitBatch === batchName) {
+          selectedProfitBatch = batches[0] || 'Đợt 1 (12.6kg)';
+        }
+        saveState();
+        renderBatchSelectOptions();
+        renderProfitFilterControls();
+        renderProfitView();
+        showToast(`Đã xóa đợt "${batchName}"!`);
+      }
+    }
+
     function renderBatchSelectOptions() {
-      const sel = document.getElementById('inputMaterialBatch');
-      if (!sel) return;
-      sel.innerHTML = batches.map(b => `<option value="${b}">${b}</option>`).join('');
+      const inp = document.getElementById('inputMaterialBatch');
+      const container = document.getElementById('materialBatchPills');
+      if (!inp || !container) return;
+
+      if (!batches.includes(inp.value)) {
+        inp.value = batches[0] || 'Đợt 1 (12.6kg)';
+      }
+      const currentVal = inp.value;
+
+      container.innerHTML = batches.map(b => {
+        const isSelected = b === currentVal;
+        const safeName = escapeHtml(b);
+        const isDefault = b === 'Đợt 1 (12.6kg)';
+        return `
+          <div onclick="selectMaterialBatch('${safeName.replace(/'/g, "\\'")}')"
+               class="cursor-pointer select-none inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
+                 isSelected
+                   ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-200 border border-emerald-600'
+                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+               }">
+            <i class="fa-solid ${isSelected ? 'fa-circle-check' : 'fa-layer-group'} text-[10px] ${isSelected ? 'text-emerald-100' : 'text-slate-400'}"></i>
+            <span>${safeName}</span>
+            ${!isDefault ? `<button type="button" onclick="deleteBatchItem(event, '${safeName.replace(/'/g, "\\'")}')" class="ml-0.5 w-4 h-4 rounded-full flex items-center justify-center ${isSelected ? 'bg-emerald-700/60 hover:bg-rose-500 text-white' : 'bg-slate-200/80 hover:bg-rose-500 hover:text-white text-slate-500'} text-[10px] transition" title="Xóa đợt"><i class="fa-solid fa-xmark"></i></button>` : ''}
+          </div>
+        `;
+      }).join('');
     }
 
     // Thêm món nguyên liệu mới
@@ -3611,8 +3673,8 @@ function switchBottomTab(tab) {
     // HỆ THỐNG CẬP NHẬT OTA SIÊU TỐC (CHIPCHIP OTA ENGINE)
     // ==========================================
     let activeOtaInfo = {
-      version: '1.0.4',
-      build_number: 106,
+      version: '1.0.5',
+      build_number: 107,
       is_ota: true
     };
 
@@ -3708,17 +3770,20 @@ function switchBottomTab(tab) {
       }
     }
 
-    // Callback nhận thông tin phiên bản từ Flutter
+    // Callback nhận thông tin phiên bản từ Flutter (Luôn ưu tiên hiển thị bản mới nhất)
     window.onOtaInfoReceived = function(info) {
       if (!info) return;
-      activeOtaInfo = info;
-      const txt = `Phiên bản: v${info.version || '1.0.1'} (Build ${info.build_number || 101})${info.is_ota ? ' • OTA' : ''}`;
+      const incomingBuild = Number(info.build_number || 0);
+      const localBuild = Number(activeOtaInfo.build_number || 107);
+      const effectiveInfo = incomingBuild >= localBuild ? info : activeOtaInfo;
+      activeOtaInfo = effectiveInfo;
+      const txt = `Phiên bản: v${effectiveInfo.version || '1.0.5'} (Build ${effectiveInfo.build_number || 107})${effectiveInfo.is_ota ? ' • OTA' : ''}`;
       const el1 = document.getElementById('otaCurrentVerText');
       if (el1) el1.textContent = txt;
       const el2 = document.getElementById('otaModalSubVer');
       if (el2) el2.textContent = txt;
       const el3 = document.getElementById('otaTab4VerText');
-      if (el3) el3.textContent = `v${info.version || '1.0.1'} (Build ${info.build_number || 101})`;
+      if (el3) el3.textContent = `v${effectiveInfo.version || '1.0.5'} (Build ${effectiveInfo.build_number || 107})`;
     };
 
     // Quét file OTA trong thư mục Download

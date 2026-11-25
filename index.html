@@ -96,7 +96,7 @@
           <div class="flex items-center gap-1.5">
             <h1 class="text-base font-extrabold text-slate-800 leading-tight">ChipChip Mây & Gạo</h1>
             <span class="text-[9px] bg-rose-100 text-rose-700 font-extrabold px-1.5 py-0.2 rounded-md">PRO</span>
-            <span class="text-[9px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full shadow-xs flex items-center gap-0.5"><i class="fa-solid fa-bolt text-[8px]"></i>v1.0.3</span>
+            <span class="text-[9px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full shadow-xs flex items-center gap-0.5"><i class="fa-solid fa-bolt text-[8px]"></i>v1.0.4</span>
           </div>
           <p class="text-[11px] text-slate-500 font-medium" id="currentDateText">Hôm nay</p>
         </div>
@@ -664,7 +664,7 @@
             <h3 class="text-xs font-extrabold text-slate-800">Cập Nhật OTA Siêu Tốc</h3>
           </div>
           <span class="text-[10px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full font-bold border border-emerald-200" id="otaTab4VerText">
-            v1.0.3 (Build 105)
+            v1.0.4 (Build 106)
           </span>
         </div>
         <p class="text-[11px] text-slate-500 leading-relaxed mb-3">
@@ -812,7 +812,7 @@
   </div>
 
   <!-- MODAL XÁC NHẬN HÀNH ĐỘNG ĐẸP MẮT (THAY THẾ WINDOW.CONFIRM) -->
-  <div id="confirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+  <div id="confirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-xs w-full p-5 space-y-4 shadow-2xl text-center animate-in fade-in zoom-in-95 duration-150">
       <div id="confirmIconWrapper" class="w-14 h-14 rounded-full bg-rose-100 text-rose-500 mx-auto flex items-center justify-center text-2xl shadow-inner">
         <i id="confirmIcon" class="fa-solid fa-trash-can"></i>
@@ -835,7 +835,7 @@
   </div>
 
   <!-- MODAL NHẬP DỮ LIỆU ĐẸP MẮT (THAY THẾ WINDOW.PROMPT) -->
-  <div id="promptModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+  <div id="promptModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-xs w-full p-5 space-y-4 shadow-2xl text-center animate-in fade-in zoom-in-95 duration-150">
       <div id="promptIconWrapper" class="w-14 h-14 rounded-full bg-rose-100 text-rose-500 mx-auto flex items-center justify-center text-2xl shadow-inner">
         <i id="promptIcon" class="fa-solid fa-candy-cane"></i>
@@ -847,7 +847,7 @@
         </p>
       </div>
       <div class="text-left">
-        <input type="text" id="promptInput" onkeydown="if(event.key==='Enter') handlePromptChoice(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-400">
+        <input type="text" id="promptInput" onkeydown="if(event.key==='Enter') handlePromptChoice(this.value)" class="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl px-3.5 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-rose-400 focus:bg-white transition">
       </div>
       <div class="flex gap-2 pt-1">
         <button onclick="handlePromptChoice(null)" class="btn-tactile flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
@@ -1721,16 +1721,24 @@
       const file = event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = async function(e) {
         try {
           const imported = JSON.parse(e.target.result);
-          if (confirm('Bạn có chắc muốn khôi phục dữ liệu từ file này? Dữ liệu hiện tại sẽ được cập nhật.')) {
+          const confirmed = await showConfirmDialog({
+            title: 'Khôi Phục Dữ Liệu',
+            message: 'Bạn có chắc muốn khôi phục dữ liệu từ file này? Dữ liệu hiện tại sẽ được cập nhật.',
+            icon: 'fa-file-import',
+            confirmText: 'Khôi phục ngay',
+            confirmClass: 'from-emerald-500 to-teal-500 text-white shadow-emerald-200',
+            iconBg: 'bg-emerald-100 text-emerald-600'
+          });
+          if (confirmed) {
             window.restoreFromNativeBridge(imported);
-            alert('Khôi phục dữ liệu thành công 100%!');
+            showToast('🎉 Khôi phục dữ liệu thành công 100%!');
             closeConfigModal();
           }
         } catch (err) {
-          alert('File sao lưu không hợp lệ!');
+          showToast('⚠️ File sao lưu không hợp lệ!');
         }
       };
       reader.readAsText(file);
@@ -1819,8 +1827,13 @@
     }
 
     // Thêm vị kẹo mới
-    function promptAddNewFlavor() {
-      const name = prompt("Nhập tên vị kẹo mới (ví dụ: Dâu tây, Matcha, Việt quất...):");
+    async function promptAddNewFlavor() {
+      const name = await showPromptDialog({
+        title: 'Thêm Vị Kẹo Mới',
+        message: 'Nhập tên vị kẹo muốn bán thêm:',
+        placeholder: 'VD: Dâu tây, Matcha, Việt quất...',
+        icon: 'fa-candy-cane'
+      });
       if (name && name.trim()) {
         const cleanName = name.trim();
         const id = 'flv_' + Date.now();
@@ -1838,7 +1851,7 @@
         selectedFlavorId = id;
         saveState();
         renderFlavorButtons();
-        alert(`Đã thêm vị "${cleanName}" với giá 25.000đ/lạng!`);
+        showToast(`Đã thêm vị "${cleanName}" (25.000đ/lạng)!`);
       }
     }
 
@@ -2432,7 +2445,7 @@
         renderFlavorPriceConfigList();
         saveState();
         renderFlavorButtons();
-        alert(`Đã áp dụng mức giá ${price.toLocaleString('vi-VN')} đ/lạng cho TẤT CẢ các vị!`);
+        showToast(`Đã áp dụng giá ${price.toLocaleString('vi-VN')} đ/lạng cho TẤT CẢ các vị!`);
       }
     }
 
@@ -2460,13 +2473,20 @@
     }
 
     // Xóa vị
-    function deleteFlavor(flavorId) {
-      if (confirm('Bạn có chắc muốn xóa vị này khỏi danh mục?')) {
+    async function deleteFlavor(flavorId) {
+      const confirmed = await showConfirmDialog({
+        title: 'Xóa Vị Kẹo',
+        message: 'Bạn có chắc muốn xóa vị này khỏi danh mục không?',
+        icon: 'fa-trash-can',
+        confirmText: 'Xóa vị này'
+      });
+      if (confirmed) {
         flavors = flavors.filter(f => f.id !== flavorId);
         if (selectedFlavorId === flavorId) selectedFlavorId = 'mix';
         renderFlavorPriceConfigList();
         saveState();
         renderFlavorButtons();
+        showToast('Đã xóa vị khỏi danh mục!');
       }
     }
 
@@ -2527,19 +2547,28 @@
       }
 
       navigator.clipboard.writeText(text).then(() => {
-        alert('Đã sao chép nội dung chốt đơn! Chị có thể mở Zalo và Dán (Paste) để gửi ngay.');
+        showToast('Đã sao chép nội dung chốt đơn! Mở Zalo và Dán để gửi ngay.');
       }).catch(err => {
-        alert('Nội dung chốt đơn:\n\n' + text);
+        showToast('Đã tạo báo cáo chốt đơn!');
       });
     }
 
     // Khôi phục dữ liệu ban đầu
-    function restoreInitialDataConfirm() {
-      if (confirm('Khôi phục lại danh sách mẫu ban đầu chuẩn 12.6 kg?')) {
+    async function restoreInitialDataConfirm() {
+      const confirmed = await showConfirmDialog({
+        title: 'Khôi Phục Danh Sách Mẫu',
+        message: 'Bạn có muốn khôi phục lại danh sách mẫu ban đầu chuẩn 12.6 kg không?',
+        icon: 'fa-rotate-left',
+        confirmText: 'Khôi phục mẫu',
+        confirmClass: 'from-amber-500 to-orange-500 text-white shadow-amber-200',
+        iconBg: 'bg-amber-100 text-amber-600'
+      });
+      if (confirmed) {
         orders = JSON.parse(JSON.stringify(INITIAL_ORDERS));
         flavors = JSON.parse(JSON.stringify(DEFAULT_FLAVORS));
         saveState();
         renderFlavorButtons();
+        showToast('Đã khôi phục danh sách mẫu ban đầu!');
       }
     }
 
@@ -2915,10 +2944,10 @@
     function copyAndSendEveningZalo() {
       const text = document.getElementById('eveningZaloMessageText').value;
       navigator.clipboard.writeText(text).then(() => {
-        alert('Đã sao chép báo cáo doanh thu tối thành công!\nApp sẽ mở Zalo để bạn dán và gửi ngay.');
+        showToast('Đã sao chép báo cáo tối! Đang mở Zalo...');
         window.open('https://zalo.me', '_blank');
       }).catch(err => {
-        alert('Đã tạo báo cáo tối:\n\n' + text);
+        showToast('Đã tạo báo cáo doanh thu tối!');
       });
     }
 
@@ -3350,8 +3379,13 @@ function switchBottomTab(tab) {
     }
 
     // Thêm đợt làm kẹo mới
-    function promptAddNewBatch() {
-      const bName = prompt("Nhập tên Đợt làm kẹo mới (ví dụ: Đợt 2 - Cuối tuần, Đợt Giáng sinh...):");
+    async function promptAddNewBatch() {
+      const bName = await showPromptDialog({
+        title: 'Thêm Đợt Làm Kẹo Mới',
+        message: 'Nhập tên Đợt làm kẹo mới để dễ theo dõi thu chi & lợi nhuận:',
+        placeholder: 'VD: Đợt 2 - Cuối tuần, Đợt Giáng sinh...',
+        icon: 'fa-layer-group'
+      });
       if (bName && bName.trim()) {
         const clean = bName.trim();
         if (!batches.includes(clean)) {
@@ -3361,7 +3395,9 @@ function switchBottomTab(tab) {
           renderBatchSelectOptions();
           renderProfitFilterControls();
           renderProfitView();
-          alert(`Đã thêm đợt "${clean}" thành công!`);
+          showToast(`Đã thêm đợt "${clean}" thành công!`);
+        } else {
+          showToast(`Đợt "${clean}" đã tồn tại!`);
         }
       }
     }
@@ -3413,14 +3449,21 @@ function switchBottomTab(tab) {
       // Reset form
       document.getElementById('inputMaterialName').value = '';
       document.getElementById('inputMaterialPrice').value = '';
-      alert(`Đã ghi nhận mua "${name}" (${qty} ${unit}) - ${price.toLocaleString('vi-VN')} đ vào sổ thành công!`);
+      showToast(`Đã ghi nhận "${name}" (${qty} ${unit}) - ${price.toLocaleString('vi-VN')} đ!`);
     }
 
     // Xóa món nguyên liệu
-    function deleteMaterialItem(id) {
-      if (confirm('Bạn có chắc muốn xóa món nguyên liệu này khỏi sổ chi phí?')) {
+    async function deleteMaterialItem(id) {
+      const confirmed = await showConfirmDialog({
+        title: 'Xóa Chi Phí Nguyên Liệu',
+        message: 'Bạn có chắc muốn xóa món nguyên liệu này khỏi sổ chi phí không?',
+        icon: 'fa-trash-can',
+        confirmText: 'Xóa món này'
+      });
+      if (confirmed) {
         materials = materials.filter(m => m.id !== id);
         saveState();
+        showToast('Đã xóa món nguyên liệu khỏi sổ chi phí!');
       }
     }
 
@@ -3471,10 +3514,10 @@ function switchBottomTab(tab) {
       }
 
       navigator.clipboard.writeText(text).then(() => {
-        alert('Đã sao chép báo cáo chi phí & lợi nhuận!\nApp sẽ mở Zalo để bạn dán gửi ngay.');
+        showToast('Đã sao chép báo cáo lợi nhuận! Đang mở Zalo...');
         window.open('https://zalo.me', '_blank');
       }).catch(err => {
-        alert('Nội dung báo cáo lợi nhuận:\n\n' + text);
+        showToast('Đã tạo báo cáo lợi nhuận!');
       });
     }
 
@@ -3568,8 +3611,8 @@ function switchBottomTab(tab) {
     // HỆ THỐNG CẬP NHẬT OTA SIÊU TỐC (CHIPCHIP OTA ENGINE)
     // ==========================================
     let activeOtaInfo = {
-      version: '1.0.3',
-      build_number: 105,
+      version: '1.0.4',
+      build_number: 106,
       is_ota: true
     };
 

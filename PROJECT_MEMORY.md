@@ -286,6 +286,13 @@
     * Build hoàn tất file APK nền tảng `ChipChip_MayVaGao_v1.0.apk` (v1.0.3 Build 105) tích hợp sẵn CDN quốc tế chống chặn mạng viễn thông, cố định cổng 8089 và chữ ký bảo mật v2.
     * Đảm bảo từ bản này, người dùng chỉ cần ấn nút **`[⚡ CẬP NHẬT OTA SIÊU TỐC]`** ngay trong app là tự động nâng cấp 100% trong 1-2 giây trên mọi mạng viễn thông 4G/Wifi.
 
+- **2026-11-25 (Phiên 23 - Thay thế 100% hộp thoại đen mặc định sang Modal & Toast chuẩn Native - Phát hành OTA v1.0.4 Build 106):**
+  - **Vấn đề:** Một số chức năng (xóa nguyên liệu trong Thu Chi, thêm Đợt làm kẹo mới, thêm vị kẹo mới, xóa vị, khôi phục JSON, báo cáo Zalo) vẫn gọi `confirm()`, `prompt()`, `alert()` mặc định khiến Android WebView hiện hộp thoại đen xám `"Trang tại http://127.0.0.1 cho biết:"` khó nhìn và thô cứng.
+  - **Giải pháp:**
+    * Chuyển đổi toàn bộ 18 vị trí `alert/confirm/prompt` còn sót sang dùng hệ thống `showConfirmDialog()`, `showPromptDialog()` và `showToast()` đồng bộ giao diện pastel bo tròn, chữ rõ nét, nút to dễ bấm trên di động.
+    * Nâng `z-index` của `confirmModal` & `promptModal` lên `z-[90]` và mở rộng ô nhập liệu `promptInput` (`py-3 px-3.5 text-sm`) giúp gõ thoải mái trên điện thoại.
+    * Đóng gói và phát hành OTA **v1.0.4 (Build 106)** lên GitHub Release & CDN jsDelivr (chỉ phát hành gói OTA theo đúng quy tắc).
+
 ## 3. Danh Sách Tính Năng Cốt Lõi (Đã Hoàn Thành & Đang Ổn Định)
 - [x] Tạo `PROJECT_MEMORY.md` theo quy tắc hệ thống.
 - [x] Tích hợp Động Cơ Cập Nhật OTA Siêu Tốc (1-2 giây), loại bỏ tải APK và cảnh báo Play Protect.
